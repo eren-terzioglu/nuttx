@@ -47,8 +47,13 @@
 #include <nuttx/drivers/drivers.h>
 #endif
 
+#if defined(CONFIG_ESP32S3_SPIFLASH)
 #include "esp32s3_spiflash.h"
 #include "esp32s3_spiflash_mtd.h"
+#elif defined(CONFIG_ESPRESSIF_SPIFLASH)
+#include "espressif/esp_spiflash.h"
+#include "espressif/esp_spiflash_mtd.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -277,9 +282,15 @@ static int init_storage_partition(void)
   int ret = OK;
   struct mtd_dev_s *mtd;
 
+#if defined(CONFIG_ESP32S3_SPIFLASH)
   mtd = esp32s3_spiflash_alloc_mtdpart(CONFIG_ESP32S3_STORAGE_MTD_OFFSET,
                                        CONFIG_ESP32S3_STORAGE_MTD_SIZE,
                                        false);
+#else
+  mtd = esp_spiflash_alloc_mtdpart(CONFIG_ESP32S3_STORAGE_MTD_OFFSET,
+                                   CONFIG_ESP32S3_STORAGE_MTD_SIZE);
+#endif
+
   if (!mtd)
     {
       syslog(LOG_ERR, "ERROR: Failed to alloc MTD partition of SPI Flash\n");
@@ -363,7 +374,11 @@ int board_spiflash_init(void)
 {
   int ret = OK;
 
+#if defined(CONFIG_ESP32S3_SPIFLASH)
   ret = esp32s3_spiflash_init();
+#else
+  ret = esp_spiflash_init();
+#endif
   if (ret < 0)
     {
       return ret;

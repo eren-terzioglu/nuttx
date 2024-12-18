@@ -116,7 +116,7 @@ int esp32s3_bringup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ESP32S3_SPIFLASH
+#if defined(CONFIG_ESP32S3_SPIFLASH) || defined(CONFIG_ESPRESSIF_SPIFLASH)
 int board_spiflash_init(void);
 #endif
 

@@ -587,7 +587,7 @@ static void IRAM_ATTR config_psram_spi_phases(void)
 }
 
 /****************************************************************************
- * Name: spi_flash_set_rom_required_regs
+ * Name: esp_spi_flash_set_rom_required_regs
  *
  * Description:
  *   Set flash ROM required register.
@@ -600,7 +600,7 @@ static void IRAM_ATTR config_psram_spi_phases(void)
  *
  ****************************************************************************/
 
-void IRAM_ATTR spi_flash_set_rom_required_regs(void)
+void IRAM_ATTR esp_spi_flash_set_rom_required_regs(void)
 {
 #ifdef CONFIG_ESP32S3_FLASH_MODE_OCT
 
@@ -718,7 +718,7 @@ int IRAM_ATTR psram_enable(int mode, int vaddrmode)
    * these regs. This function is to restore SPI1 init state.
    */
 
-  spi_flash_set_rom_required_regs();
+  esp_spi_flash_set_rom_required_regs();
 
   /* Flash chip requires MSPI specifically, call this function to set them */
 

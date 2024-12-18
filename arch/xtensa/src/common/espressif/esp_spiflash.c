@@ -43,13 +43,20 @@
 #include "hal/spimem_flash_ll.h"
 #include "hal/spi_flash_ll.h"
 #include "esp_rom_spiflash.h"
+#ifdef CONFIG_ARCH_CHIP_ESP32S2
 #include "esp32s2_irq.h"
+#endif
+#ifdef CONFIG_ARCH_CHIP_ESP32S3
+#include "esp32s3_irq.h"
+#include "esp_intr_alloc.h"
+#endif
 #ifndef CONFIG_ARCH_CHIP_ESP32S3
 #include "esp_private/spi_flash_os.h"
 #endif
 
 #ifdef CONFIG_ARCH_CHIP_ESP32S3
-#define esp_intr_noniram_enable esp32s3_irq_noniram_disable
+#define esp_intr_noniram_enable   esp32s3_irq_noniram_enable
+#define esp_intr_noniram_disable  esp32s3_irq_noniram_disable
 #endif
 
 /****************************************************************************
@@ -597,7 +604,7 @@ IRAM_ATTR int spi_flash_write(uint32_t dest_addr,
   wait_flash_idle();
   disable_flash_write();
 #ifdef CONFIG_ARCH_CHIP_ESP32S3
-  spi_flash_check_and_flush_cache(start_address, size);
+  spi_flash_check_and_flush_cache(dest_addr, size);
 #endif
 
   spiflash_end();
@@ -624,11 +631,18 @@ int esp_spiflash_init(void)
 {
 #ifdef CONFIG_ARCH_CHIP_ESP32S3
   extern void spi_flash_guard_set(const struct spiflash_guard_funcs *);
-#endif
+
+  nxmutex_init(&s_flash_op_mutex);
+
+  spi_flash_guard_set((const struct spiflash_guard_funcs *)
+                      &g_spi_flash_guard_funcs);
+
+#else
 
   nxmutex_init(&s_flash_op_mutex);
 
   spi_flash_guard_set((spi_flash_guard_funcs_t *)&g_spi_flash_guard_funcs);
 
+#endif
   return OK;
 }

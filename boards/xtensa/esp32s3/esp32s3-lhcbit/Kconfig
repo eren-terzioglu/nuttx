@@ -9,7 +9,7 @@ config ESP32S3_STORAGE_MTD_OFFSET
 	hex "Storage MTD base address in SPI Flash"
 	default 0x180000 if !ESP32S3_HAVE_OTA_PARTITION
 	default 0x250000 if ESP32S3_HAVE_OTA_PARTITION
-	depends on ESP32S3_MTD
+	depends on ESP32S3_MTD || ESPRESSIF_MTD
 	---help---
 		MTD base address in SPI Flash.
 
@@ -20,14 +20,14 @@ config ESP32S3_STORAGE_MTD_SIZE
 	range 0x0 0x800000 if ESP32S3_FLASH_8M
 	range 0x0 0x1000000 if ESP32S3_FLASH_16M
 	range 0x0 0x2000000 if ESP32S3_FLASH_32M
-	depends on ESP32S3_MTD
+	depends on ESP32S3_MTD || ESPRESSIF_MTD
 	---help---
 		MTD size in SPI Flash.
 
 choice ESP32S3_SPIFLASH_FS
 	prompt "Mount SPI Flash MTD on bring-up"
 	default ESP32S3_SPIFLASH_SMARTFS
-	depends on ESP32S3_MTD
+	depends on ESP32S3_MTD || ESPRESSIF_MTD
 	optional
 	---help---
 		Mount the SPI Flash MTD with the selected File System format on board
