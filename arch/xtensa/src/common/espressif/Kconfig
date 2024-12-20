@@ -511,6 +511,17 @@ config ESPRESSIF_STORAGE_MTD_DEBUG
 		If this option is enabled, Storage MTD driver read and write functions
 		will output input parameters and return values (if applicable).
 
+config ESPRESSIF_SPIFLASH_OP_TASK_STACKSIZE
+	int "The SPI flash operation task stack size"
+	default 768
+	depends on SMP
+	---help---
+		When SMP is enabled, it is needed to create two tasks (one for each
+		core) to be able to run IRAM-enabled interrupts. These tasks ensures
+		that the core that isn't performing the SPI flash operation is able
+		to disable non-IRAM interrupts and wait for the SPI flash operation
+		to be finished.
+
 endif # ESPRESSIF_SPIFLASH
 
 endmenu # SPI Flash Configuration

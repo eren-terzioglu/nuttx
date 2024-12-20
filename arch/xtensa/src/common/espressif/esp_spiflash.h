@@ -181,6 +181,38 @@ int spi_flash_write(uint32_t dest_addr, const void *buffer, uint32_t size);
 
 int esp_spiflash_init(void);
 
+/****************************************************************************
+ * Name: esp_flash_encryption_check
+ *
+ * Description:
+ *   Check if SPI Flash encryption enabled.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   True: SPI Flash encryption is enable, False if not.
+ *
+ ****************************************************************************/
+
+bool esp_flash_encryption_check(void);
+
+/****************************************************************************
+ * Name: esp_get_flash_address_mapped_as_text
+ *
+ * Description:
+ *   Get flash address which is currently mapped as text
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   flash address which is currently mapped as text
+ *
+ ****************************************************************************/
+
+uint32_t esp_get_flash_address_mapped_as_text(void);
+
 #ifdef __cplusplus
 }
 #endif
