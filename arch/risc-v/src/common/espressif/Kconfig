@@ -330,12 +330,27 @@ config ESPRESSIF_I2C_PERIPH
 	depends on (ESPRESSIF_I2C0 || ESPRESSIF_I2C1)
 	default n
 
+config ESPRESSIF_I2C_SLAVE_PERIPH
+	bool
+	depends on (ESPRESSIF_I2C0_SLAVE || ESPRESSIF_I2C1_SLAVE)
+	default n
+
 config ESPRESSIF_I2C0
 	bool "I2C 0"
 	default n
 	select ESPRESSIF_I2C
 	select I2C
 	select ESPRESSIF_I2C_PERIPH
+
+config ESPRESSIF_I2C0_SLAVE
+	bool "I2C 0 SLAVE"
+	default n
+	depends on !ESPRESSIF_I2C0
+	select ESPRESSIF_I2C
+	select I2C
+	select I2C_SLAVE
+	select I2C_SLAVE_DRIVER
+	select ESPRESSIF_I2C_SLAVE_PERIPH
 
 config ESPRESSIF_I2C1
 	bool "I2C 1"
@@ -344,6 +359,16 @@ config ESPRESSIF_I2C1
 	select ESPRESSIF_I2C
 	select I2C
 	select ESPRESSIF_I2C_PERIPH
+
+config ESPRESSIF_I2C1_SLAVE
+	bool "I2C 1"
+	default n
+	depends on ARCH_CHIP_ESP32H2 && !ESPRESSIF_I2C1
+	select ESPRESSIF_I2C
+	select I2C
+	select I2C_SLAVE
+	select I2C_SLAVE_DRIVER
+	select ESPRESSIF_I2C_SLAVE_PERIPH
 
 config ESPRESSIF_I2C_BITBANG
 	bool "I2C Bitbang"
@@ -1650,7 +1675,7 @@ endmenu # LEDC configuration
 menu "I2C Configuration"
 	depends on ESPRESSIF_I2C
 
-if ESPRESSIF_I2C0
+if ESPRESSIF_I2C0 || ESPRESSIF_I2C0_SLAVE
 
 config ESPRESSIF_I2C0_SCLPIN
 	int "I2C0 SCL Pin"
@@ -1662,9 +1687,9 @@ config ESPRESSIF_I2C0_SDAPIN
 	default 5
 	range 0 21
 
-endif # ESPRESSIF_I2C0
+endif # ESPRESSIF_I2C0 || ESPRESSIF_I2C0_SLAVE
 
-if ESPRESSIF_I2C1
+if ESPRESSIF_I2C1 || ESPRESSIF_I2C1_SLAVE
 
 config ESPRESSIF_I2C1_SCLPIN
 	int "I2C1 SCL Pin"
@@ -1676,7 +1701,7 @@ config ESPRESSIF_I2C1_SDAPIN
 	default 1
 	range 0 21
 
-endif # ESPRESSIF_I2C1
+endif # ESPRESSIF_I2C1 || ESPRESSIF_I2C1_SLAVE
 
 if ESPRESSIF_I2C_BITBANG
 
