@@ -1403,7 +1403,7 @@ endmenu # ADC Configuration
 menu "I2C Configuration"
 	depends on ESP32S3_I2C
 
-if ESP32S3_I2C0
+if ESP32S3_I2C0 || ESPRESSIF_I2C0_SLAVE
 
 config ESP32S3_I2C0_SCLPIN
 	int "I2C0 SCL Pin"
@@ -1415,9 +1415,9 @@ config ESP32S3_I2C0_SDAPIN
 	default 1
 	range 0 48
 
-endif # ESP32S3_I2C0
+endif # ESP32S3_I2C0 || ESPRESSIF_I2C0_SLAVE
 
-if ESP32S3_I2C1
+if ESP32S3_I2C1 || ESPRESSIF_I2C1_SLAVE
 
 config ESP32S3_I2C1_SCLPIN
 	int "I2C1 SCL Pin"
@@ -1429,7 +1429,7 @@ config ESP32S3_I2C1_SDAPIN
 	default 4
 	range 0 48
 
-endif # ESP32S3_I2C1
+endif # ESP32S3_I2C1 || ESPRESSIF_I2C1_SLAVE
 
 config ESP32S3_I2CTIMEOSEC
 	int "Timeout seconds"
