@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/sim/src/sim/sim_netdriver.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -71,7 +73,8 @@
 
 #include "sim_internal.h"
 
-#define SIM_NETDEV_BUFSIZE (MAX_NETDEV_PKTSIZE + CONFIG_NET_GUARDSIZE)
+#define SIM_NETDEV_BUFSIZE (CONFIG_SIM_NETDEV_MTU + ETH_HDRLEN + \
+                            CONFIG_NET_GUARDSIZE)
 
 /* We don't know packet length before receiving, so we can only offload it
  * when netpkt's buffer is long enough.

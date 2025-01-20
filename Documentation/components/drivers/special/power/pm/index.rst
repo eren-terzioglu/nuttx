@@ -81,6 +81,22 @@ All PM interfaces are declared in the file ``include/nuttx/power/pm.h``.
   initialized (since they may attempt to register with the power
   management subsystem).
 
+.. c:function:: int pm_domain_register(int domain, FAR struct pm_callback_s *cb)
+
+  Called by a device driver in order to register to receive power
+  management event callbacks from specific domain.
+  Refer to the `Callbacks`_
+  section for more details.
+
+  :param domain: Identifies the target register domain
+  :param cb:
+    An instance of :c:struct:`pm_callback_s`
+    providing the driver callback functions.
+
+  :return:
+    Zero (``OK``) on success; otherwise a negated
+    ``errno`` value is returned.
+
 .. c:function:: int pm_register(FAR struct pm_callback_s *callbacks)
 
   Called by a device driver in
@@ -88,7 +104,27 @@ All PM interfaces are declared in the file ``include/nuttx/power/pm.h``.
   Refer to the `Callbacks`_
   section for more details.
 
+  Compatible kept, only register to PM_IDLE_DOMAIN by marcro.
+
   :param callbacks:
+    An instance of :c:struct:`pm_callback_s`
+    providing the driver callback functions.
+
+  :return:
+    Zero (``OK``) on success; otherwise a negated
+    ``errno`` value is returned.
+
+.. c:function:: int pm_domain_unregister(int domain, FAR struct pm_callback_s *cb)
+
+  Called by a device driver in order to unregister previously
+  registered power management event from specific domain.
+  callbacks. Refer to the `Callbacks`_
+  section for more details.
+
+  **Input Parameters:**
+
+  :param domain: Identifies the target unregister domain
+  :param cb:
     An instance of :c:struct:`pm_callback_s`
     providing the driver callback functions.
 
@@ -102,6 +138,8 @@ All PM interfaces are declared in the file ``include/nuttx/power/pm.h``.
   order to unregister previously registered power management event
   callbacks. Refer to the `Callbacks`_
   section for more details.
+
+  Compatible kept, only unregister with PM_IDLE_DOMAIN by marcro.
 
   **Input Parameters:**
 
@@ -183,8 +221,69 @@ All PM interfaces are declared in the file ``include/nuttx/power/pm.h``.
   completes the entire state change unless interrupts are disabled
   throughout the state change.
 
+.. c:function:: void pm_idle(pm_idle_handler_t handler)
+
+  This function provide standard pm idle work flow for up_idle.
+  Called from the chip bsp and should only focus on handle the system
+  state changed.
+
+  :param handler: The execution after PM_IDLE_DOMAIN state changed
+
+.. c:function:: void pm_idle_unlock(void)
+
+  This function provide assist of smp pm idle work progress, for pm sequence
+  other cores will not release before the core hold cpus lock.
+  Call this function to release SMP idle cpus lock.
+
+.. c:function:: bool pm_idle_lock(int cpu)
+
+  This function provide assist of smp pm idle work progress, for pm sequence
+  other cores will not release before the core hold cpus lock.
+  Call this function to ensure other core will not run until released.
+
+  :param cpu: The current CPU, used to update cpu_set_t
+
+  :return:
+    true, Current CPU is the first one woken from sleep, should handle system domain restore process also.
+    false, Current CPU is not the first one woken from sleep, should only handle cpu domain restore process.
+
+  **Assumptions:** Restore operation pm_changestate(, PM_RESTORE) will done
+  inside pm_idle. Handler don't have to care about it.
+
 Callbacks
 =========
+
+.. c:type:: pm_idle_handler_t
+
+  This type declare is provide for pm_idle interface.
+  Handle the pm low power action and execution.
+  Possible execution for long time because of WFI inside.
+
+  - for not SMP case.
+
+  .. code-block:: c
+
+    typedef void (*pm_idle_handler_t)(enum pm_state_e systemstate);
+
+  :param systemstate:
+      Indicate the new system power state.
+
+  - for SMP case.
+
+  .. code-block:: c
+
+    typedef bool (*pm_idle_handler_t)(int cpu,
+                                      enum pm_state_e cpustate,
+                                      enum pm_state_e systemstate);
+
+  :param cpu:
+      Indicate the current working cpu.
+  :param cpustate:
+      Indicate the current cpu power state.
+  :param systemstate:
+      Indicate the new system power state. If not the lastcore enter idle,
+      systemstate always PM_RESTORE. If not PM_RESTORE, handler should
+      cover system pm operations.
 
 .. c:struct:: pm_callback_s
 

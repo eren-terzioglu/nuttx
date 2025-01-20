@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/include/arch.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -64,8 +66,9 @@
 /* A task group must have its L1 table in memory always, and the rest can
  * be dynamically committed to memory (and even swapped).
  *
- * In this implementation every level tables besides the final level N are
- * kept in memory always, while the level N tables are dynamically allocated.
+ * In this implementation level tables except the final level N are always
+ * kept in static memory, while the level N tables are always dynamically
+ * allocated. There is one static page per level in `spgtables[]`.
  *
  * The implications ? They depend on the MMU type.
  *

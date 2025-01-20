@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/power/battery/axp202.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -390,8 +392,7 @@ static int axp202_current(FAR struct battery_charger_dev_s *dev, int value)
       return ret;
     }
 
-  /**
-   * Charge current setting
+  /* Charge current setting
    * Icharge= [300+(Bit3-0)*100] mA
    */
 

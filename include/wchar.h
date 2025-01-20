@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/wchar.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -97,7 +99,8 @@ struct mbstate_s
   int __fill[6];
 };
 
-typedef struct mbstate_s mbstate_t;
+typedef struct mbstate_s mbstate_s;
+#define mbstate_t mbstate_s
 
 /* FILE
  *   As described in <stdio.h>.
@@ -142,14 +145,15 @@ extern "C"
 wint_t            btowc(int);
 int               fwprintf(FILE *, FAR const wchar_t *, ...);
 int               fwscanf(FILE *, FAR const wchar_t *, ...);
-wint_t            fgetwc(FILE *);
+wint_t            fgetwc(FAR FILE *);
+wint_t            fgetwc_unlocked(FAR FILE *f);
 FAR wchar_t      *fgetws(wchar_t *, int, FILE *);
 wint_t            fputwc(wchar_t, FILE *);
 wint_t            fputwc_unlocked(wchar_t, FAR FILE *);
 int               fputws(FAR const wchar_t *, FILE *);
 int               fputws_unlocked(FAR const wchar_t *, FAR FILE *);
 int               fwide(FILE *, int);
-wint_t            getwc(FILE *);
+wint_t            getwc(FAR FILE *);
 wint_t            getwchar(void);
 int               mbsinit(FAR const mbstate_t *);
 size_t            mbrlen(FAR const char *, size_t, FAR mbstate_t *);
@@ -165,7 +169,8 @@ wint_t            putwchar(wchar_t);
 wint_t            putwchar_unlocked(wchar_t);
 int               swprintf(FAR wchar_t *, size_t, FAR const wchar_t *, ...);
 int               swscanf(FAR const wchar_t *, FAR const wchar_t *, ...);
-wint_t            ungetwc(wint_t, FILE *);
+wint_t            ungetwc(wint_t, FAR FILE *);
+wint_t            ungetwc_unlocked(wint_t, FAR FILE *);
 int               vfwprintf(FILE *, FAR const wchar_t *, va_list);
 int               vfwscanf(FILE *, FAR const wchar_t *, va_list);
 int               vwprintf(FAR const wchar_t *, va_list);
@@ -200,7 +205,9 @@ FAR wchar_t      *wcsstr(FAR const wchar_t *, FAR const wchar_t *);
 #ifdef CONFIG_HAVE_DOUBLE
 double            wcstod(FAR const wchar_t *, FAR wchar_t **);
 #endif
+#ifdef CONFIG_HAVE_FLOAT
 float             wcstof(FAR const wchar_t *, FAR wchar_t **);
+#endif
 FAR wchar_t      *wcstok(FAR wchar_t *, FAR const wchar_t *, FAR wchar_t **);
 long int          wcstol(FAR const wchar_t *, FAR wchar_t **, int);
 #ifdef CONFIG_HAVE_LONG_DOUBLE

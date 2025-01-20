@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/mx8mp/verdin-mx8mp/src/mx8mp_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -25,7 +27,6 @@
 #include <nuttx/config.h>
 #include <nuttx/leds/userled.h>
 #include <nuttx/input/buttons.h>
-
 #include <debug.h>
 
 #include "verdin-mx8mp.h"
@@ -35,9 +36,28 @@
 #  include "mx8mp_ina219.h"
 #endif
 
+#ifdef CONFIG_MX8MP_RPMSG
+#  include <mx8mp_rptun.h>
+#endif
+
+#ifdef CONFIG_RPMSG_UART
+#  include <nuttx/serial/uart_rpmsg.h>
+#endif
+
+#ifdef CONFIG_FS_PROCFS
+#  include <nuttx/fs/fs.h>
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void)
+{
+  uart_rpmsg_init("netcore", "proxy", 4096, true);
+}
+#endif
 
 /****************************************************************************
  * Name: mx8mp_bringup
@@ -50,6 +70,10 @@
 int mx8mp_bringup(void)
 {
   int ret = OK;
+
+#ifdef CONFIG_MX8MP_RPMSG
+  mx8mp_rptun_init("imx8mp-shmem", "netcore");
+#endif /* CONFIG_MX8MP_RPMSG */
 
 #if defined(CONFIG_USERLED) && !defined(CONFIG_ARCH_LEDS)
 #ifdef CONFIG_USERLED_LOWER

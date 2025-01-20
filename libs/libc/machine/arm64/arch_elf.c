@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm64/arch_elf.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,7 @@
 #include <nuttx/compiler.h>
 #include <nuttx/bits.h>
 #include <nuttx/elf.h>
+#include <nuttx/mm/kasan.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -181,6 +184,9 @@ aarch64_insn_encode_immediate(enum insn_imm_type_e type,
 static uint64_t do_reloc(enum reloc_op_e op,
                          uintptr_t place, uint64_t val)
 {
+  val = (uint64_t)kasan_reset_tag((const void *)val);
+  place = (uint64_t)kasan_reset_tag((const void *)place);
+
   switch (op)
     {
       case RELOC_OP_ABS:
@@ -465,14 +471,15 @@ bool up_checkarch(const Elf64_Ehdr *ehdr)
  *
  ****************************************************************************/
 
-int up_relocate(const Elf64_Rel *rel, const Elf64_Sym *sym, uintptr_t addr)
+int up_relocate(const Elf64_Rel *rel, const Elf64_Sym *sym, uintptr_t addr,
+                void *arch_data)
 {
   berr("ERROR: REL relocation not supported\n");
   return -ENOSYS;
 }
 
 int up_relocateadd(const Elf64_Rela *rel, const Elf64_Sym *sym,
-                   uintptr_t addr)
+                   uintptr_t addr, void *arch_data)
 {
   bool overflow_check = true;
   uint64_t val;

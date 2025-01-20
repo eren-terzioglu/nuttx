@@ -1,5 +1,7 @@
 /****************************************************************************
- * boards/xtensa/esp32s3/esp32s3-box/src/esp32s3_board_lcd.c
+ * boards/xtensa/esp32s3/esp32s3-box/src/esp32s3_board_lcd_st7789.c
+ *
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

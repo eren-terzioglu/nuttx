@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/riscv_backtrace.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -124,12 +126,19 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
+ * Assumptions:
+ *   Have to make sure tcb keep safe during function executing, it means
+ *   1. Tcb have to be self or not-running.  In SMP case, the running task
+ *      PC & SP cannot be backtrace, as whose get from tcb is not the newest.
+ *   2. Tcb have to keep not be freed.  In task exiting case, have to
+ *      make sure the tcb get from pid and up_backtrace in one critical
+ *      section procedure.
+ *
  ****************************************************************************/
 
 int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 {
   struct tcb_s *rtcb = running_task();
-  irqstate_t flags;
   int ret;
 
   if (size <= 0 || !buffer)
@@ -155,8 +164,8 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
             {
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                               (void *)CURRENT_REGS[REG_FP],
-                               (void *)CURRENT_REGS[REG_EPC],
+                               running_regs()[REG_FP],
+                               running_regs()[REG_EPC],
                                &buffer[ret], size - ret, &skip);
             }
         }
@@ -181,8 +190,6 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     }
   else
     {
-      flags = enter_critical_section();
-
 #ifdef CONFIG_ARCH_KERNEL_STACK
       if (tcb->xcp.ustkptr != NULL)
         {
@@ -200,8 +207,6 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                           (void *)tcb->xcp.regs[REG_EPC],
                           buffer, size, &skip);
         }
-
-      leave_critical_section(flags);
     }
 
   return ret;

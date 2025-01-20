@@ -34,6 +34,7 @@
 #include "esp32_clockconfig.h"
 #include "esp32_rt_timer.h"
 
+#include "hardware/esp32_apb_ctrl.h"
 #include "hardware/esp32_rtccntl.h"
 #include "hardware/esp32_rtc_io.h"
 #include "hardware/esp32_dport.h"
@@ -292,6 +293,7 @@ static RTC_DATA_ATTR struct esp32_rtc_backup_s rtc_saved_data;
 
 static struct esp32_rtc_backup_s *g_rtc_save;
 static bool g_rt_timer_enabled = false;
+static spinlock_t g_rtc_lock = SP_UNLOCKED;
 
 /****************************************************************************
  * Public Data
@@ -863,9 +865,6 @@ uint32_t IRAM_ATTR esp32_rtc_clk_cal(enum esp32_rtc_cal_sel_e cal_clk,
 
   return period;
 }
-
-enum esp32_rtc_xtal_freq_e rtc_get_xtal(void)
-                __attribute__((alias("esp32_rtc_clk_xtal_freq_get")));
 
 /****************************************************************************
  * Name: esp32_rtc_clk_xtal_freq_get
@@ -1915,7 +1914,7 @@ time_t up_rtc_time(void)
   uint64_t time_us;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* NOTE: RT-Timer starts to work after the board is initialized, and the
    * RTC controller starts works after up_rtc_initialize is initialized.
@@ -1944,7 +1943,7 @@ time_t up_rtc_time(void)
                   esp32_rtc_get_boot_time();
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return (time_t)(time_us / USEC_PER_SEC);
 }
@@ -1972,7 +1971,7 @@ int up_rtc_settime(const struct timespec *ts)
   uint64_t rtc_offset_us;
 
   DEBUGASSERT(ts != NULL && ts->tv_nsec < NSEC_PER_SEC);
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   now_us = ((uint64_t) ts->tv_sec) * USEC_PER_SEC +
           ts->tv_nsec / NSEC_PER_USEC;
@@ -1992,7 +1991,7 @@ int up_rtc_settime(const struct timespec *ts)
   g_rtc_save->offset = 0;
   esp32_rtc_set_boot_time(rtc_offset_us);
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return OK;
 }
@@ -2065,7 +2064,7 @@ int up_rtc_gettime(struct timespec *tp)
   irqstate_t flags;
   uint64_t time_us;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   if (g_rt_timer_enabled == true)
     {
@@ -2080,7 +2079,7 @@ int up_rtc_gettime(struct timespec *tp)
   tp->tv_sec  = time_us / USEC_PER_SEC;
   tp->tv_nsec = (time_us % USEC_PER_SEC) * NSEC_PER_USEC;
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return OK;
 }
@@ -2123,7 +2122,7 @@ int up_rtc_setalarm(struct alm_setalarm_s *alminfo)
     {
       /* Create the RT-Timer alarm */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave(&g_rtc_lock);
 
       if (cbinfo->alarm_hdl == NULL)
         {
@@ -2134,7 +2133,7 @@ int up_rtc_setalarm(struct alm_setalarm_s *alminfo)
           if (ret < 0)
             {
               rtcerr("ERROR: Failed to create rt_timer error=%d\n", ret);
-              spin_unlock_irqrestore(NULL, flags);
+              spin_unlock_irqrestore(&g_rtc_lock, flags);
               return ret;
             }
         }
@@ -2155,7 +2154,7 @@ int up_rtc_setalarm(struct alm_setalarm_s *alminfo)
           ret = OK;
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(&g_rtc_lock, flags);
     }
 
   return ret;
@@ -2190,7 +2189,8 @@ int up_rtc_cancelalarm(enum alm_id_e alarmid)
 
   if (cbinfo->ac_cb != NULL)
     {
-      flags = spin_lock_irqsave(NULL);
+      sched_lock();
+      flags = spin_lock_irqsave(&g_rtc_lock);
 
       /* Stop and delete the alarm */
 
@@ -2201,7 +2201,8 @@ int up_rtc_cancelalarm(enum alm_id_e alarmid)
       cbinfo->deadline_us = 0;
       cbinfo->alarm_hdl = NULL;
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(&g_rtc_lock, flags);
+      sched_unlock();
 
       ret = OK;
     }
@@ -2232,7 +2233,7 @@ int up_rtc_rdalarm(struct timespec *tp, uint32_t alarmid)
   DEBUGASSERT((RTC_ALARM0 <= alarmid) &&
               (alarmid < RTC_ALARM_LAST));
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&g_rtc_lock);
 
   /* Get the alarm according to the alarmid */
 
@@ -2243,7 +2244,7 @@ int up_rtc_rdalarm(struct timespec *tp, uint32_t alarmid)
   tp->tv_nsec = ((rt_timer_time_us() + g_rtc_save->offset +
               cbinfo->deadline_us) % USEC_PER_SEC) * NSEC_PER_USEC;
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_rtc_lock, flags);
 
   return OK;
 }

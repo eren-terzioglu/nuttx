@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_rptun.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -50,7 +52,7 @@ extern "C"
  * Name: stm32_rptun_init
  ****************************************************************************/
 
-int stm32_rptun_init(const char *shmemname, const char *cpuname);
+int stm32_rptun_init(const char *cpuname);
 
 #undef EXTERN
 #if defined(__cplusplus)

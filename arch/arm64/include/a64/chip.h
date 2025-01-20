@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/include/a64/chip.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Number of bytes in @p x kibibytes/mebibytes/gibibytes */
+/* Number of bytes in x kibibytes/mebibytes/gibibytes */
 
 #define KB(x)           ((x) << 10)
 #define MB(x)           (KB(x) << 10)

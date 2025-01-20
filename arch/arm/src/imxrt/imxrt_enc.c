@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/imxrt/imxrt_enc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -591,7 +593,8 @@ void imxrt_enc_clock_enable(uint32_t base)
     }
 
 #if (defined(CONFIG_ARCH_FAMILY_IMXRT105x) || \
-     defined(CONFIG_ARCH_FAMILY_IMXRT106x))
+     defined(CONFIG_ARCH_FAMILY_IMXRT106x) || \
+     defined(CONFIG_ARCH_FAMILY_IMXRT117x))
   else if (base == IMXRT_ENC3_BASE)
     {
       imxrt_clockall_enc3();
@@ -623,7 +626,8 @@ void imxrt_enc_clock_disable(uint32_t base)
     }
 
 #if (defined(CONFIG_ARCH_FAMILY_IMXRT105x) || \
-     defined(CONFIG_ARCH_FAMILY_IMXRT106x))
+     defined(CONFIG_ARCH_FAMILY_IMXRT106x) || \
+     defined(CONFIG_ARCH_FAMILY_IMXRT117x))
   else if (base == IMXRT_ENC3_BASE)
     {
       imxrt_clockoff_enc3();

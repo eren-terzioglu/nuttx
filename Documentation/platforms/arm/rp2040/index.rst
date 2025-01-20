@@ -23,6 +23,7 @@ USB
 PIO            RP2040 Programmable I/O
 IRQs        
 DMA         
+Clock Output
 ws2812         Smart pixels (e.g. Neopixel)
 Flash ROM Boot
 SRAM Boot      If Pico SDK is available a nuttx.uf2 file will be created
@@ -36,9 +37,9 @@ also available.
 Installation
 ============
 
-1. Download Raspberry Pi Pico SDK::
+1. Download Raspberry Pi Pico SDK:
 
-    git clone -b 1.1.2 https://github.com/raspberrypi/pico-sdk.git
+    git clone -b 2.0.0 https://github.com/raspberrypi/pico-sdk.git
 
 2. Set PICO_SDK_PATH environment variable::
 

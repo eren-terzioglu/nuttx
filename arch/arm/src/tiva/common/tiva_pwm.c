@@ -1,14 +1,11 @@
 /****************************************************************************
  * arch/arm/src/tiva/common/tiva_pwm.c
  *
- *   Copyright (C) 2016 Young Mu. All rights reserved.
- *   Author: Young Mu <young.mu@aliyun.com>
- *
- * The basic structure of this driver derives in spirit (if nothing more)
- * from the NuttX SAM PWM driver which has:
- *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2016 Young Mu. All rights reserved.
+ * SPDX-FileCopyrightText: 2013 Gregory Nutt. All rights reserved.
+ * SPDX-FileContributor: Young Mu <young.mu@aliyun.com>
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -757,7 +754,7 @@ static int tiva_pwm_ioctl(struct pwm_lowerhalf_s *dev, int cmd,
 
 struct pwm_lowerhalf_s *tiva_pwm_initialize(int channel)
 {
-  assert(channel >= 0 && channel <= 7);
+  ASSERT(channel >= 0 && channel <= 7);
   struct tiva_pwm_chan_s *chan;
 
   switch (channel)
@@ -824,7 +821,7 @@ struct pwm_lowerhalf_s *tiva_pwm_initialize(int channel)
 
   /* Enable PWM controller (refer to TM4C1294NCPDT 23.4.1) */
 
-  assert(chan->controller_id == 0);
+  ASSERT(chan->controller_id == 0);
   tiva_pwm_enablepwr(chan->controller_id);
   tiva_pwm_enableclk(chan->controller_id);
 

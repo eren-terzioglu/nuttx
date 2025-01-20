@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/nrf52/nrf52840-dk/src/nrf52_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -61,13 +63,17 @@
 #  include "nrf52_lsm9ds1.h"
 #endif
 
+#ifdef CONFIG_NRF52_RADIO_IEEE802154
+#  include "nrf52_ieee802154.h"
+#endif
+
 #include "nrf52840-dk.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define NRF52_TIMER    (0)
+#define NRF52_TIMER    (2)
 #define LMS9DS1_I2CBUS (0)
 
 /****************************************************************************
@@ -308,6 +314,15 @@ int nrf52_bringup(void)
              ret);
     }
 #endif /* CONFIG_SENSORS_LSM6DSL */
+
+#ifdef CONFIG_NRF52_RADIO_IEEE802154
+  ret = nrf52_ieee802154_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize IEE802154 radio: %d\n",
+             ret);
+    }
+#endif
 
   UNUSED(ret);
   return OK;

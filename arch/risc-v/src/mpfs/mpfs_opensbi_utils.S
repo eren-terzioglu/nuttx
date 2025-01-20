@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_opensbi_utils.S
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -61,7 +63,8 @@ mpfs_global_pointer:
  *   times.
  *
  * Input Parameters:
- *   None
+ *   a0 - hartid
+ *   a1 - next_addr
  *
  * Returned Value:
  *   None
@@ -74,7 +77,7 @@ mpfs_opensbi_prepare_hart:
   /* Setup OpenSBI exception handler */
 
   la   t0, mpfs_exception_opensbi
-  csrw mtvec, t0
+  csrw CSR_MTVEC, t0
 
   /* la gp, __global_pointer$ will not work. We want to have the gp as seen
    * in the .map file exactly. We need to restore gp in the trap handler.
@@ -85,9 +88,9 @@ mpfs_opensbi_prepare_hart:
 
   /* Setup stacks per hart, the stack top is the end of the hart's scratch */
 
-  csrr a0, mhartid
+  csrr t0, CSR_MHARTID
   li   t1, SBI_SCRATCH_SIZE
-  mul  t0, a0, t1
+  mul  t0, t0, t1
   la   sp, g_scratches
   add  sp, sp, t0
   tail mpfs_opensbi_setup

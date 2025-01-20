@@ -34,6 +34,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/spinlock.h>
 
 #include "xtensa.h"
 #include "esp32s2_clockconfig.h"
@@ -98,6 +99,7 @@ struct esp32s2_uart_s g_uart0_config =
   .rs485_dir_polarity = true,
 #endif
 #endif
+  .lock = SP_UNLOCKED
 };
 
 #endif /* CONFIG_ESP32S2_UART0 */
@@ -145,6 +147,7 @@ struct esp32s2_uart_s g_uart1_config =
   .rs485_dir_polarity = true,
 #endif
 #endif
+  .lock = SP_UNLOCKED
 };
 
 #endif /* CONFIG_ESP32S2_UART1 */
@@ -648,12 +651,12 @@ void esp32s2_lowputc_rst_rxfifo(const struct esp32s2_uart_s *priv)
  *
  ****************************************************************************/
 
-void esp32s2_lowputc_disable_all_uart_int(const struct esp32s2_uart_s *priv,
+void esp32s2_lowputc_disable_all_uart_int(struct esp32s2_uart_s *priv,
                                           uint32_t *current_status)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   if (current_status != NULL)
     {
@@ -670,7 +673,7 @@ void esp32s2_lowputc_disable_all_uart_int(const struct esp32s2_uart_s *priv,
 
   putreg32(UINT32_MAX, UART_INT_CLR_REG(priv->id));
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************

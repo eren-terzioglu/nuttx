@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/samv7/samv71-xult/src/sam_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -59,6 +61,10 @@
 
 #ifdef HAVE_LED_DRIVER
 #  include <nuttx/leds/userled.h>
+#endif
+
+#ifdef CONFIG_VNCSERVER
+#  include <nuttx/video/vnc.h>
 #endif
 
 #if defined(HAVE_RTC_DSXXXX) || defined(HAVE_RTC_PCF85263)
@@ -562,11 +568,19 @@ int sam_bringup(void)
 #ifdef CONFIG_VIDEO_FB
   /* Initialize and register the LCD framebuffer driver */
 
+#  ifdef CONFIG_VNCSERVER
+  ret = vnc_fb_register(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: vnc_fb_register() failed: %d\n", ret);
+    }
+#  else
   ret = fb_register(0, 0);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
     }
+#  endif
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

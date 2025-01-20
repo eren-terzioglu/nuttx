@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/netdev/netdev_ioctl.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -628,7 +630,7 @@ static int netdev_wifr_ioctl(FAR struct socket *psock, int cmd,
       dev = netdev_findbyname(req->ifr_name);
       if (cmd == SIOCGIWNAME)
         {
-          if (dev == NULL)
+          if (dev == NULL || dev->d_lltype != NET_LL_IEEE80211)
             {
               ret = -ENODEV;
             }
@@ -724,6 +726,8 @@ static ssize_t net_ioctl_ifreq_arglen(uint8_t domain, int cmd)
       case SIOCACANSTDFILTER:
       case SIOCDCANSTDFILTER:
       case SIOCCANRECOVERY:
+      case SIOCGCANSTATE:
+      case SIOCSCANSTATE:
       case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
@@ -913,7 +917,11 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
         {
           FAR struct lifreq *lreq = (FAR struct lifreq *)req;
           idx = MIN(idx, CONFIG_NETDEV_MAX_IPv6_ADDR - 1);
+
+          netdev_ipv6_removemcastmac(dev, dev->d_ipv6[idx].addr);
           ioctl_set_ipv6addr(dev->d_ipv6[idx].addr, &lreq->lifr_addr);
+          netdev_ipv6_addmcastmac(dev, dev->d_ipv6[idx].addr);
+
           netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET6,
            dev->d_ipv6[idx].addr, net_ipv6_mask2pref(dev->d_ipv6[idx].mask));
         }
@@ -978,11 +986,13 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
             /* Yes.. bring the interface up */
 
             ret = netdev_ifup(dev);
+#ifdef CONFIG_NET_ARP_ACD
+            /* having address then start acd */
+
+            arp_acd_setup(dev);
+#endif /* CONFIG_NET_ARP_ACD */
           }
-
-        /* Is this a request to take the interface down? */
-
-        else if ((req->ifr_flags & IFF_DOWN) != 0)
+        else
           {
             /* Yes.. take the interface down */
 
@@ -1022,7 +1032,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
         else
 #endif
           {
-            nerr("Unsupported link layer\n");
+            nwarn("WARNING: Unsupported link layer\n");
             ret = -EAFNOSUPPORT;
           }
         break;
@@ -1076,9 +1086,19 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 #ifdef CONFIG_NET_IPv4
         if (psock->s_domain != PF_INET6)
           {
+            if (net_ipv4addr_cmp(dev->d_ipaddr,
+                ((FAR struct sockaddr_in *)&req->ifr_addr)->sin_addr.s_addr))
+              {
+                break;
+              }
+
             ioctl_set_ipv4addr(&dev->d_ipaddr, &req->ifr_addr);
             netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET,
                          &dev->d_ipaddr, net_ipv4_mask2pref(dev->d_netmask));
+
+#ifdef CONFIG_NET_ARP_ACD
+            arp_acd_set_addr(dev);
+#endif /* CONFIG_NET_ARP_ACD */
           }
 #endif
 
@@ -1184,6 +1204,23 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               &req->ifr_ifru.ifru_can_filter;
             ret = dev->d_ioctl(dev, cmd,
                           (unsigned long)(uintptr_t)can_filter);
+          }
+        else
+          {
+            ret = -ENOSYS;
+          }
+        break;
+#endif
+
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NETDEV_CAN_STATE_IOCTL)
+      case SIOCGCANSTATE:  /* Get state from a CAN/LIN controller */
+      case SIOCSCANSTATE:  /* Set the LIN/CAN controller state */
+        if (dev->d_ioctl)
+          {
+            FAR struct can_ioctl_state_s *can_state =
+              &req->ifr_ifru.ifru_can_state;
+            ret = dev->d_ioctl(dev, cmd,
+                          (unsigned long)(uintptr_t)can_state);
           }
         else
           {
@@ -1324,7 +1361,7 @@ static bool ioctl_arpreq_parse(FAR struct arpreq *req,
     {
       *addr = (FAR struct sockaddr_in *)&req->arp_pa;
       *dev  = req->arp_dev[0] != '\0' ?
-              netdev_findbyname((FAR const char *)req->arp_dev) :
+              netdev_findbyname(req->arp_dev) :
               netdev_findby_ripv4addr(INADDR_ANY, (*addr)->sin_addr.s_addr);
       return true;
     }

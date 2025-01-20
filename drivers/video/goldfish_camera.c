@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/video/goldfish_camera.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@
 #include <nuttx/video/imgsensor.h>
 #include <nuttx/video/imgdata.h>
 #include <nuttx/video/video.h>
+#include <nuttx/video/v4l2_cap.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -119,6 +122,8 @@ goldfish_camera_data_start_capture(FAR struct imgdata_s *data,
                                    FAR void *arg);
 static int goldfish_camera_data_stop_capture(FAR struct imgdata_s *data);
 static int goldfish_camera_data_set_buf(FAR struct imgdata_s *data,
+                                        uint8_t nr_datafmts,
+                                        FAR imgdata_format_t *datafmts,
                                         FAR uint8_t *addr,
                                         uint32_t size);
 
@@ -653,6 +658,8 @@ static int goldfish_camera_data_validate_buf(FAR uint8_t *addr,
 }
 
 static int goldfish_camera_data_set_buf(FAR struct imgdata_s *data,
+                                        uint8_t nr_datafmts,
+                                        FAR imgdata_format_t *datafmts,
                                         FAR uint8_t *addr,
                                         uint32_t size)
 {
@@ -775,10 +782,7 @@ int goldfish_camera_initialize(void)
           snprintf(devpath, sizeof(devpath), "/dev/video%zd", i);
         }
 
-      video_register(devpath,
-                     &priv[i]->data,
-                     &sensor,
-                     1);
+      capture_register(devpath, &priv[i]->data, &sensor, 1);
     }
 
   return 0;

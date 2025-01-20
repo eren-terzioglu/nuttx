@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/cxd56xx/common/src/cxd56_bmi160_scu.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -165,5 +167,5 @@ int board_bmi160_initialize(int bus)
   return ret;
 }
 
-#endif  /* CONFIG_SENSORS_BMI160_SCU_SPI */
-#endif  /* CONFIG_SENSORS_BMI160_SCU */
+#endif /* CONFIG_SENSORS_BMI160_SCU_SPI */
+#endif /* CONFIG_SENSORS_BMI160_SCU */

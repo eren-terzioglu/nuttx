@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_cpu_psci.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -99,7 +101,6 @@ struct psci_interface
 
 uint32_t psci_version(void);
 int psci_cpu_off(void);
-int psci_cpu_reset(void);
 int psci_cpu_on(unsigned long cpuid, uintptr_t entry_point);
 int psci_sys_poweroff(void);
 int psci_sys_reset(void);

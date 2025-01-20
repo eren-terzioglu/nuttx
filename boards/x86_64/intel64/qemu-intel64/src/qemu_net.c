@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/x86_64/intel64/qemu-intel64/src/qemu_net.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,7 +51,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET
+#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
 void x86_64_netinitialize(void)
 {
 }

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/rp2040/rp2040_ws2812.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,7 +28,6 @@
 
 #include <stdlib.h>
 #include <fcntl.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include <nuttx/kmalloc.h>
@@ -412,17 +413,17 @@ static ssize_t my_write(struct file *filep,
 
           /* Copy swapping WWRRGGBB to GGRRBBWW */
 
-    #ifdef CONFIG_BIG_ENDIAN
+#ifdef CONFIG_BIG_ENDIAN
           xfer_p[3] = *data++;
           xfer_p[1] = *data++;
           xfer_p[0] = *data++;
           xfer_p[2] = *data++;
-    #else /* CONFIG_BIG_ENDIAN */
+#else /* CONFIG_BIG_ENDIAN */
           xfer_p[1] = *data++;
           xfer_p[3] = *data++;
           xfer_p[2] = *data++;
           xfer_p[0] = *data++;
-    #endif /* CONFIG_BIG_ENDIAN */
+#endif /* CONFIG_BIG_ENDIAN */
 
           xfer_p   += 4;
           position += 4;
@@ -490,17 +491,17 @@ static ssize_t my_read(struct file *filep,
 
       /* Copy swapping GGRRBBWW to WWRRGGBB  */
 
-  #ifdef CONFIG_BIG_ENDIAN
+#ifdef CONFIG_BIG_ENDIAN
       *data++ = xfer_p[3];
       *data++ = xfer_p[1];
       *data++ = xfer_p[0];
       *data++ = xfer_p[2];
-  #else /* CONFIG_BIG_ENDIAN */
+#else /* CONFIG_BIG_ENDIAN */
       *data++ = xfer_p[1];
       *data++ = xfer_p[3];
       *data++ = xfer_p[2];
       *data++ = xfer_p[0];
-  #endif /* CONFIG_BIG_ENDIAN */
+#endif /* CONFIG_BIG_ENDIAN */
 
       xfer_p   += 4;
       position += 4;

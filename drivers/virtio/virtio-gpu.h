@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/virtio/virtio-gpu.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -520,6 +522,8 @@ extern "C"
  ****************************************************************************/
 
 int virtio_register_gpu_driver(void);
+
+int virtio_gpu_fb_register(int display);
 
 #undef EXTERN
 #ifdef __cplusplus

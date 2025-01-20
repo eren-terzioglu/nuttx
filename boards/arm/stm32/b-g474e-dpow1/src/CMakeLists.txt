@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/stm32/b-g474e-dpow1/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -28,6 +30,10 @@ endif()
 
 if(CONFIG_BOARDCTL)
   list(APPEND SRCS stm32_appinit.c)
+endif()
+
+if(CONFIG_DRIVERS_SMPS)
+  list(APPEND SRCS stm32_smps.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/include/fvp-v8r/chip.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Number of bytes in @p x kibibytes/mebibytes/gibibytes */
+/* Number of bytes in x kibibytes/mebibytes/gibibytes */
 
 #define KB(x)           ((x) << 10)
 #define MB(x)           (KB(x) << 10)
@@ -39,12 +41,12 @@
 
 #if defined(CONFIG_ARCH_CHIP_FVP_ARMV8R)
 
-#if CONFIG_ARM_GIC_VERSION == 2
+#if CONFIG_ARM64_GIC_VERSION == 2
 
 #define CONFIG_GICD_BASE          0xAF000000
 #define CONFIG_GICR_BASE          0xAF100000
 
-#elif CONFIG_ARM_GIC_VERSION == 3 || CONFIG_ARM_GIC_VERSION == 4
+#elif CONFIG_ARM64_GIC_VERSION == 3 || CONFIG_ARM64_GIC_VERSION == 4
 
 #define CONFIG_GICD_BASE          0xAF000000
 #define CONFIG_GICR_BASE          0xAF100000
@@ -52,9 +54,9 @@
 
 #else
 
-#error CONFIG_ARM_GIC_VERSION should be 2, 3 or 4
+#error CONFIG_ARM64_GIC_VERSION should be 2, 3 or 4
 
-#endif /* CONFIG_ARM_GIC_VERSION */
+#endif /* CONFIG_ARM64_GIC_VERSION */
 
 #define CONFIG_RAMBANK_ADDR      0x00000000
 #define CONFIG_RAMBANK_SIZE      MB(128)

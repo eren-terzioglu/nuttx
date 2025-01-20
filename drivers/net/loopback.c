@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/net/loopback.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -357,7 +359,7 @@ int localhost_initialize(void)
 
   /* Put the network in the UP state */
 
-  priv->lo_dev.d_flags = IFF_UP;
+  IFF_SET_UP(priv->lo_dev.d_flags);
   return lo_ifup(&priv->lo_dev);
 }
 

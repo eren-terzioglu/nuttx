@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/riscv_checkstack.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -181,7 +183,7 @@ size_t up_check_tcbstack(struct tcb_s *tcb)
 }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
-size_t up_check_intstack(void)
+size_t up_check_intstack(int cpu)
 {
   return riscv_stack_check((uintptr_t)g_intstackalloc,
                            (CONFIG_ARCH_INTERRUPTSTACK & ~15));

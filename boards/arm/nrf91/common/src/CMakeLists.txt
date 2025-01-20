@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/nrf91/common/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -30,6 +32,10 @@ if(CONFIG_ARCH_BOARD_COMMON)
 
   if(CONFIG_NRF91_PROGMEM)
     list(APPEND SRCS nrf91_progmem.c)
+  endif()
+
+  if(CONFIG_BOARDCTL_RESET)
+    list(APPEND SRCS nrf91_reset.c)
   endif()
 
   target_sources(board PRIVATE ${SRCS})

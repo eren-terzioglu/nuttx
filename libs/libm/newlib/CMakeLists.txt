@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libm/newlib/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -40,7 +42,12 @@ if(CONFIG_LIBM_NEWLIB)
         patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
         ${CMAKE_CURRENT_LIST_DIR}/0001-newlib-libm-fix-__RCSID-build-error.patch
         && patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
-        ${CMAKE_CURRENT_LIST_DIR}/0002-newlib-libm-remove-include-reent.h.patch)
+        ${CMAKE_CURRENT_LIST_DIR}/0002-newlib-libm-remove-include-reent.h.patch
+        && patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
+        ${CMAKE_CURRENT_LIST_DIR}/0003-newlib-fix-compilation-for-x86.patch &&
+        patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
+        ${CMAKE_CURRENT_LIST_DIR}/0004-newlib-disable-optmisation-for-sincos.patch
+    )
 
     FetchContent_GetProperties(newlib_fetch)
 
@@ -80,12 +87,23 @@ if(CONFIG_LIBM_NEWLIB)
     set(ARCH_DIR ${CONFIG_ARCH})
   endif()
 
-  file(GLOB_RECURSE COMMON_CSRCS ${NEWLIB_DIR}/newlib/libm/common/*.c)
-  file(GLOB_RECURSE COMPLEX_CSRCS ${NEWLIB_DIR}/newlib/libm/complex/*.c)
   file(GLOB_RECURSE ARCH_CSRCS
        ${NEWLIB_DIR}/newlib/libm/machine/${ARCH_DIR}/*.c)
 
+  file(GLOB_RECURSE COMMON_CSRCS ${NEWLIB_DIR}/newlib/libm/common/*.c)
+  file(GLOB_RECURSE COMPLEX_CSRCS ${NEWLIB_DIR}/newlib/libm/complex/*.c)
+
+  if(CONFIG_ARCH_X86_64)
+    file(GLOB_RECURSE ARCH_CSRCS ${NEWLIB_DIR}/newlib/libm/fenv/*.c)
+  endif()
+
   set(CSRCS ${COMMON_CSRCS} ${COMPLEX_CSRCS} ${ARCH_CSRCS})
+
+  # aggresive optimisation can replace occurrences of sinl() and cosl() with
+  # sincosl(), but sincosl() is missing in newlib which causes error. So let's
+  # use custom implementation here.
+
+  list(APPEND CSRCS ${CMAKE_CURRENT_LIST_DIR}/sincosl.c)
 
   if(CONFIG_LIBM_NEWLIB_HW_FP)
     file(GLOB_RECURSE MATHFP_CSRCS ${NEWLIB_DIR}/newlib/libm/mathfp/*.c)
@@ -111,6 +129,10 @@ if(CONFIG_LIBM_NEWLIB)
 
   set(INCDIR ${CMAKE_CURRENT_LIST_DIR}/include ${NEWLIB_DIR}/newlib/libm/common)
 
+  if(CONFIG_ARCH_X86_64)
+    list(APPEND INCDIR ${NEWLIB_DIR}/newlib/libc/machine/shared_x86/sys)
+  endif()
+
   # ############################################################################
   # Library Configuration
   # ############################################################################
@@ -120,5 +142,10 @@ if(CONFIG_LIBM_NEWLIB)
   target_sources(m PRIVATE ${CSRCS})
   target_include_directories(m PRIVATE ${INCDIR})
   target_compile_options(m PRIVATE ${CFLAGS})
+
+  set_property(
+    TARGET nuttx
+    APPEND
+    PROPERTY NUTTX_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/include)
 
 endif()

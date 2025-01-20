@@ -1,6 +1,8 @@
 # ##############################################################################
 # fs/shm/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -20,6 +22,6 @@
 
 # Include POSIX message queue support
 
-if(CONFIG_FS_SHM)
+if(CONFIG_FS_SHMFS)
   target_sources(fs PRIVATE shm_open.c shm_unlink.c shmfs.c shmfs_alloc.c)
 endif()

@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/stm32/stm32f401rc-rs485/src/stm32_boot.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -56,6 +58,16 @@ void stm32_boardinitialize(void)
 
 #ifdef CONFIG_ARCH_LEDS
   board_autoled_initialize();
+#endif
+
+  /* Configure SPI chip selects if
+   * 1) SPI is not disabled, and
+   * 2) the weak function stm32_spidev_initialize() has been brought into
+   * the link.
+   */
+
+#if defined(CONFIG_STM32_SPI1) || defined(CONFIG_STM32_SPI2)
+  stm32_spidev_initialize();
 #endif
 }
 

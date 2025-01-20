@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32l4/stm32l4_adc.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -582,7 +584,7 @@ struct stm32_adc_ops_s
   void (*dump_regs)(struct stm32_adc_dev_s *dev);
 };
 
-#endif  /* CONFIG_STM32L4_ADC_LL_OPS */
+#endif /* CONFIG_STM32L4_ADC_LL_OPS */
 
 /****************************************************************************
  * Public Function Prototypes

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/jh7110/jh7110_memorymap.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -38,8 +40,5 @@
 #else
 #define JH7110_IDLESTACK_BASE  _ebss
 #endif
-
-#define JH7110_IDLESTACK_SIZE (CONFIG_IDLETHREAD_STACKSIZE & ~3)
-#define JH7110_IDLESTACK_TOP  (JH7110_IDLESTACK_BASE + JH7110_IDLESTACK_SIZE)
 
 #endif /* __ARCH_RISCV_SRC_JH7110_JH7110_MEMORYMAP_H */

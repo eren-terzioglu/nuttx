@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/sensors/bmi160_base.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,6 +29,7 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spi/spi.h>
@@ -240,22 +243,4 @@ void bmi160_getregs(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
 
 int bmi160_checkid(FAR struct bmi160_dev_s *priv);
 
-/****************************************************************************
- * Name: bmi160_configspi
- *
- * Description:
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SENSORS_BMI160_SPI
-inline void bmi160_configspi(FAR struct spi_dev_s *spi)
-{
-  /* Configure SPI for the BMI160 */
-
-  SPI_SETMODE(spi, SPIDEV_MODE0);
-  SPI_SETBITS(spi, 8);
-  SPI_HWFEATURES(spi, 0);
-  SPI_SETFREQUENCY(spi, BMI160_SPI_MAXFREQUENCY);
-}
-#endif
 #endif /* __INCLUDE_NUTTX_SENSORS_BMI160_COMMOM_H */

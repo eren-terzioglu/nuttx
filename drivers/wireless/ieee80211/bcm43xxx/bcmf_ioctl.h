@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/wireless/ieee80211/bcm43xxx/bcmf_ioctl.h
- * All rights reserved.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: Copyright (c) 2015 Broadcom. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -21,7 +23,6 @@
  * be used as incorporated in your product or device that incorporates
  * Broadcom wireless connectivity products and solely for the purpose of
  * enabling the functionalities of such Broadcom products.
- *
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY WARRANTIES OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING,
@@ -3177,8 +3178,8 @@ typedef enum
 #define WLC_DOT11_SC_STATUS_OFFSET (512)
 
 /* Enumerated list of event status codes
- * @note : WLC_SUP values overlap other values, so it is necessary
- *         to check the event type
+ * Note : WLC_SUP values overlap other values, so it is necessary
+ *        to check the event type
  */
 
 typedef enum
@@ -3255,8 +3256,8 @@ typedef enum
 #define WLC_E_DOT11_RC_REASON_OFFSET (768)
 
 /* Enumerated list of event reason codes
- * @note : Several values overlap other values, so it is necessary
- *         to check the event type
+ * Note : Several values overlap other values, so it is necessary
+ *        to check the event type
  */
 
 typedef enum

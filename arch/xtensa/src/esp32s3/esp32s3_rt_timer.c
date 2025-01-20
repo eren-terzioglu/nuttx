@@ -32,15 +32,17 @@
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sched.h>
 
-#include <nuttx/irq.h>
+#include <nuttx/nuttx.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 
 #include "xtensa.h"
-#include "xtensa_attr.h"
+#include "esp_attr.h"
 #include "esp32s3_irq.h"
 #include "esp32s3_rt_timer.h"
 #include "hardware/esp32s3_soc.h"
@@ -316,7 +318,7 @@ static int rt_timer_setisr(xcpt_t handler, void *arg)
 
       /* Set up to receive peripheral interrupts on the current CPU */
 
-      priv->core = up_cpu_index();
+      priv->core = this_cpu();
       priv->cpuint = esp32s3_setup_irq(priv->core,
                                        ESP32S3_PERIPH_SYSTIMER_TARGET2,
                                        1, ESP32S3_CPUINT_LEVEL);
@@ -369,10 +371,7 @@ static void start_rt_timer(struct rt_timer_s *timer,
                            uint64_t timeout,
                            bool repeat)
 {
-  irqstate_t flags;
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
-
-  flags = spin_lock_irqsave(&priv->lock);
 
   /* Only idle timer can be started */
 
@@ -437,8 +436,6 @@ static void start_rt_timer(struct rt_timer_s *timer,
     {
       tmrwarn("Timer not in idle mode. Only idle timer can be started!\n");
     }
-
-  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -458,10 +455,7 @@ static void start_rt_timer(struct rt_timer_s *timer,
 
 static void stop_rt_timer(struct rt_timer_s *timer)
 {
-  irqstate_t flags;
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
-
-  flags = spin_lock_irqsave(&priv->lock);
 
   /* "start" function can set the timer's repeat flag, and "stop" function
    * should remove this flag.
@@ -507,8 +501,6 @@ static void stop_rt_timer(struct rt_timer_s *timer)
             }
         }
     }
-
-  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -621,6 +613,7 @@ static int rt_timer_isr(int irq, void *context, void *arg)
   modifyreg32(SYSTIMER_INT_CLR_REG, 0, SYSTIMER_TARGET2_INT_CLR);
 
   flags = spin_lock_irqsave(&priv->lock);
+  sched_lock();
 
   /* Check if there is a timer running */
 
@@ -682,6 +675,7 @@ static int rt_timer_isr(int irq, void *context, void *arg)
     }
 
   spin_unlock_irqrestore(&priv->lock, flags);
+  sched_unlock();
 
   return OK;
 }
@@ -754,9 +748,16 @@ void esp32s3_rt_timer_start(struct rt_timer_s *timer,
                             uint64_t timeout,
                             bool repeat)
 {
+  irqstate_t flags;
+  struct esp32s3_rt_priv_s *priv = &g_rt_priv;
+
+  flags = spin_lock_irqsave(&priv->lock);
+
   stop_rt_timer(timer);
 
   start_rt_timer(timer, timeout, repeat);
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -775,7 +776,12 @@ void esp32s3_rt_timer_start(struct rt_timer_s *timer,
 
 void esp32s3_rt_timer_stop(struct rt_timer_s *timer)
 {
+  irqstate_t flags;
+  struct esp32s3_rt_priv_s *priv = &g_rt_priv;
+
+  flags = spin_lock_irqsave(&priv->lock);
   stop_rt_timer(timer);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -803,6 +809,7 @@ void esp32s3_rt_timer_delete(struct rt_timer_s *timer)
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
 
   flags = spin_lock_irqsave(&priv->lock);
+  sched_lock();
 
   if (timer->state == RT_TIMER_READY)
     {
@@ -830,6 +837,7 @@ void esp32s3_rt_timer_delete(struct rt_timer_s *timer)
 
 exit:
   spin_unlock_irqrestore(&priv->lock, flags);
+  sched_unlock();
 }
 
 /****************************************************************************
@@ -945,6 +953,8 @@ int esp32s3_rt_timer_init(void)
   int pid;
   irqstate_t flags;
   struct esp32s3_rt_priv_s *priv = &g_rt_priv;
+
+  spin_lock_init(&priv->lock);
 
   pid = kthread_create(RT_TIMER_TASK_NAME,
                        RT_TIMER_TASK_PRIORITY,

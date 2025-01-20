@@ -1,6 +1,8 @@
 ############################################################################
 # boards/arm/stm32/mikroe-stm32f4/src/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -64,6 +66,10 @@ endif
 
 ifeq ($(CONFIG_AUDIO_VS1053),y)
 CSRCS += stm32_vs1053.c
+endif
+
+ifeq ($(CONFIG_ETC_ROMFS),y)
+CSRCS += etc_romfs.c
 endif
 
 DEPPATH += --dep-path board

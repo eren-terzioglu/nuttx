@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/sama5/jupiter-nano/include/board_498mhz.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -203,4 +205,4 @@ extern "C"
 #endif
 
 #endif /* !__ASSEMBLY__ */
-#endif  /* __BOARDS_ARM_SAMA5_JUPITER_NANO_INCLUDE_BOARD_498MHZ_H */
+#endif /* __BOARDS_ARM_SAMA5_JUPITER_NANO_INCLUDE_BOARD_498MHZ_H */

@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/contactless/mfrc522.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -39,6 +41,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
+#include <nuttx/power/pm.h>
 #include <nuttx/contactless/mfrc522.h>
 
 #include "mfrc522.h"
@@ -97,7 +100,7 @@ int mfrc522_picc_select(FAR struct mfrc522_dev_s *dev,
 #if 0 /* TODO */
 /* IRQ Handling */
 
-static int mfrc522_irqhandler(FAR int irq, FAR void *context, FAR void *dev);
+static int mfrc522_irqhandler(int irq, FAR void *context, FAR void *dev);
 static inline int mfrc522_attachirq(FAR struct mfrc522_dev_s *dev,
                                     xcpt_t isr);
 #endif

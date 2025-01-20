@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/sim/src/sim/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -27,7 +29,7 @@ set(HOSTSRCS)
 set(HOST_INCLUDE_DIRS)
 set(STDLIBS pthread)
 
-if(CONFIG_ARCH_COVERAGE)
+if(CONFIG_COVERAGE_TOOLCHAIN)
   list(APPEND STDLIBS gcov)
 endif()
 
@@ -57,7 +59,8 @@ list(
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
-  sim_textheap.c)
+  sim_sectionheap.c
+  sim_checkhostfstypes.c)
 
 if(CONFIG_HOST_X86_64)
   if(CONFIG_SIM_M32)
@@ -116,16 +119,19 @@ if(CONFIG_LIBM_TOOLCHAIN)
   list(APPEND STDLIBS m)
 endif()
 
+if(CONFIG_RPMSG_VIRTIO_LITE)
+  list(APPEND SRCS sim_rpmsg_vritio.c)
+endif()
+
 if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
 endif()
 
 if(CONFIG_SIM_SOUND_ALSA)
   list(APPEND SRCS posix/sim_alsa.c)
-  list(APPEND SRCS posix/sim_offload.c)
+  list(APPEND SRCS sim_offload.c)
   list(APPEND STDLIBS asound)
   list(APPEND STDLIBS mad)
-  list(APPEND STDLIBS mp3lame)
 endif()
 
 # host sources ###############################################################
@@ -139,10 +145,29 @@ list(
   sim_hosttime.c
   sim_hostuart.c)
 
+# Note: sim_macho_init.c is picky about the place in the object list for
+# linking. Namely, its constructor should be the first one in the executable.
+# For now, we are just assuming no other files in HOSTSRCS provide constructors.
+if(CONFIG_HOST_MACOS)
+  if(CONFIG_HAVE_CXXINITIALIZE)
+    list(APPEND HOSTSRCS sim_macho_init.c)
+  endif()
+endif()
+
 if(CONFIG_SIM_CAMERA_V4L2)
   list(APPEND HOSTSRCS sim_host_v4l2.c)
   list(APPEND SRCS sim_camera.c)
   list(APPEND STDLIBS v4l2)
+endif()
+
+if(CONFIG_SIM_VIDEO_DECODER)
+  list(APPEND SRCS sim_decoder.c)
+  list(APPEND SRCS sim_openh264dec.c)
+endif()
+
+if(CONFIG_SIM_VIDEO_ENCODER)
+  list(APPEND SRCS sim_encoder.c)
+  list(APPEND SRCS sim_x264encoder.c)
 endif()
 
 if(CONFIG_SPINLOCK)
@@ -151,12 +176,23 @@ endif()
 
 if(CONFIG_SMP)
   list(APPEND SRCS sim_smpsignal.c sim_cpuidlestack.c)
+endif()
+
+if(CONFIG_ARCH_HAVE_MULTICPU AND NOT WIN32)
   list(APPEND HOSTSRCS sim_hostsmp.c)
 endif()
 
 if(CONFIG_SIM_X11FB)
   list(APPEND HOSTSRCS sim_x11framebuffer.c)
-  list(APPEND STDLIBS X11 Xext)
+  if(APPLE)
+    find_package(X11 REQUIRED)
+    if(X11_FOUND)
+      target_include_directories(nuttx PRIVATE ${X11_INCLUDE_DIR})
+      target_link_libraries(nuttx PRIVATE ${X11_LIBRARIES})
+    endif()
+  else()
+    list(APPEND STDLIBS X11 Xext)
+  endif()
 
   if(CONFIG_SIM_TOUCHSCREEN)
     list(APPEND SRCS sim_touchscreen.c)
@@ -187,7 +223,8 @@ elseif(CONFIG_SIM_NETDEV_VPNKIT)
   list(APPEND SRCS sim_netdriver.c)
   list(APPEND HOST_DEFINITIONS
        CONFIG_SIM_NETDEV_VPNKIT_PATH=\"${CONFIG_SIM_NETDEV_VPNKIT_PATH}\")
-  list(APPEND HOSTSRCS sim_vpnkit.c vpnkit/protocol.c vpnkit/negotiate.c)
+  list(APPEND HOSTSRCS sim_vpnkit.c vpnkit/sim_protocol.c
+       vpnkit/sim_negotiate.c)
 endif()
 
 if(CONFIG_SIM_NETUSRSOCK)
@@ -228,14 +265,18 @@ list(APPEND HOST_DEFINITIONS CONFIG_NAME_MAX=${CONFIG_NAME_MAX})
 
 configure_file(${NUTTX_DIR}/include/nuttx/fs/hostfs.h
                ${CMAKE_CURRENT_BINARY_DIR}/hostfs.h COPYONLY)
+configure_file(${CMAKE_BINARY_DIR}/include/nuttx/config.h
+               ${CMAKE_CURRENT_BINARY_DIR}/config.h COPYONLY)
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
-target_include_directories(nuttx PRIVATE ${CMAKE_BINARY_DIR}/include/nuttx)
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 target_include_directories(sim_head PUBLIC ${NUTTX_DIR}/sched)
 target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
+
+target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
+target_compile_options(arch PRIVATE -fvisibility=default)
 
 if(WIN32)
   set(HOSTDIR win)
@@ -252,4 +293,14 @@ endforeach()
 set(HOSTSRCS ${WINHOSTSRCS})
 
 target_sources(nuttx PRIVATE ${HOSTSRCS})
+
+get_target_property(HOST_COMPILE_OPTIONS nuttx COMPILE_OPTIONS)
+if(HOST_COMPILE_OPTIONS)
+  foreach(remove_item IN LISTS SIM_NO_HOST_OPTIONS)
+    list(REMOVE_ITEM HOST_COMPILE_OPTIONS ${remove_item})
+  endforeach()
+  set_target_properties(nuttx PROPERTIES COMPILE_OPTIONS
+                                         "${HOST_COMPILE_OPTIONS}")
+endif()
+
 target_compile_definitions(nuttx PRIVATE ${HOST_DEFINITIONS})

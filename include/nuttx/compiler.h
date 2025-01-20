@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/compiler.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -69,16 +71,6 @@
 #  define CONFIG_DESIGNATED_INITIALIZERS 1
 #endif
 
-/* ISO C/C++11 atomic types support */
-
-#undef CONFIG_HAVE_ATOMICS
-
-#if ((defined(__cplusplus) && __cplusplus >= 201103L) || \
-     (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)) && \
-    !defined(__STDC_NO_ATOMICS__)
-#  define CONFIG_HAVE_ATOMICS
-#endif
-
 /* C++ support */
 
 #undef CONFIG_HAVE_CXX14
@@ -87,12 +79,23 @@
 #  define CONFIG_HAVE_CXX14 1
 #endif
 
+/* Green Hills Software definitions *****************************************/
+
+#if defined(__ghs__)
+
+#  define __extension__
+#  define register
+
+#endif
+
+#undef offsetof
+
 /* GCC-specific definitions *************************************************/
 
 #ifdef __GNUC__
 
 /* Built-ins */
-#  if __GNUC__ >= 4
+#  if __GNUC__ >= 4 && !defined(__ghs__)
 #    define CONFIG_HAVE_BUILTIN_BSWAP16 1
 #    define CONFIG_HAVE_BUILTIN_BSWAP32 1
 #    define CONFIG_HAVE_BUILTIN_BSWAP64 1
@@ -173,7 +176,7 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
-#undef CONFIG_HAVE_WEAKFUNCTIONS
+#  undef CONFIG_HAVE_WEAKFUNCTIONS
 
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
@@ -207,8 +210,8 @@
 
 /* Branch prediction */
 
-#  define predict_true(x) __builtin_expect(!!(x), 1)
-#  define predict_false(x) __builtin_expect((x), 0)
+#  define predict_true(x)  __builtin_expect(!!(x), 1)
+#  define predict_false(x) __builtin_expect(!!(x), 0)
 
 /* Code locate */
 
@@ -237,7 +240,11 @@
  * the function prolog and epilog.
  */
 
-#  define naked_function __attribute__((naked,no_instrument_function))
+#  if !defined(__ghs__) || __GHS_VERSION_NUMBER >= 202354
+#    define naked_function __attribute__((naked,no_instrument_function))
+#  else
+#    define naked_function
+#  endif
 
 /* The always_inline_function attribute informs GCC that the function should
  * always be inlined, regardless of the level of optimization.  The
@@ -245,15 +252,47 @@
  */
 
 #  define always_inline_function __attribute__((always_inline,no_instrument_function))
+#  define inline_function __attribute__((always_inline)) inline
 #  define noinline_function __attribute__((noinline))
 
 /* The noinstrument_function attribute informs GCC don't instrument it */
 
 #  define noinstrument_function __attribute__((no_instrument_function))
 
+/* The no_profile_instrument_function attribute on functions is used to
+ * inform the compiler that it should not process any profile feedback
+ * based optimization code instrumentation.
+ */
+
+#  define noprofile_function __attribute__((no_profile_instrument_function))
+
+/* The nooptimiziation_function attribute no optimize */
+
+#  if defined(__clang__)
+#    define nooptimiziation_function __attribute__((optnone))
+#  else
+#    define nooptimiziation_function __attribute__((optimize("O0")))
+#  endif
+
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
 #  define nosanitize_address __attribute__((no_sanitize_address))
+
+/* the Greenhills compiler do not support the following atttributes */
+
+#  if defined(__ghs__)
+#    undef nooptimiziation_function
+#    define nooptimiziation_function
+
+#    undef nosanitize_address
+#    define nosanitize_address
+#  endif
+
+#  if defined(__AVR32__)
+
+#    undef nosanitize_address
+#    define nosanitize_address
+#  endif
 
 /* The nosanitize_undefined attribute informs GCC don't sanitize it */
 
@@ -282,6 +321,27 @@
 #    endif
 #  endif
 
+/* The constructor attribute causes the function to be called
+ * automatically before execution enters main ().
+ * Similarly, the destructor attribute causes the function to
+ * be called automatically after main () has completed or
+ * exit () has been called. Functions with these attributes are
+ * useful for initializing data that will be used implicitly
+ * during the execution of the program.
+ * See https://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Function-Attributes.html
+ */
+
+#  define constructor_fuction __attribute__((constructor))
+#  define destructor_function __attribute__((destructor))
+
+/* Use visibility_hidden to hide symbols by default
+ * Use visibility_default to make symbols visible
+ * See https://gcc.gnu.org/wiki/Visibility
+ */
+
+#  define visibility_hidden __attribute__((visibility("hidden")))
+#  define visibility_default __attribute__((visibility("default")))
+
 /* The unused code or data */
 
 #  define unused_code __attribute__((unused))
@@ -298,6 +358,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__(__builtin_free, 1))) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  else
 #    define fopen_like __attribute__((__malloc__))
 #    define popen_like __attribute__((__malloc__))
@@ -305,6 +366,7 @@
 #    define malloc_like1(a) __attribute__((__malloc__)) __attribute__((__alloc_size__(a)))
 #    define malloc_like2(a, b) __attribute__((__malloc__)) __attribute__((__alloc_size__(a, b)))
 #    define realloc_like(a) __attribute__((__alloc_size__(a)))
+#    define realloc_like2(a, b) __attribute__((__alloc_size__(a, b)))
 #  endif
 
 /* Some versions of GCC have a separate __syslog__ format.
@@ -321,6 +383,7 @@
 #  define syslog_like(a, b) __attribute__((__format__(__syslog__, a, b)))
 #  define scanf_like(a, b) __attribute__((__format__(__scanf__, a, b)))
 #  define strftime_like(a) __attribute__((__format__(__strftime__, a, 0)))
+#  define object_size(o, t) __builtin_object_size(o, t)
 
 /* GCC does not use storage classes to qualify addressing */
 
@@ -359,6 +422,18 @@
 #    undef  CONFIG_PTR_IS_NOT_INT
 
 #  elif defined(__AVR__)
+
+#    undef nosanitize_address
+#    define nosanitize_address
+
+#    if defined(__AVR_2_BYTE_PC__) || defined(__AVR_3_BYTE_PC__)
+/* 2-byte 3-byte PC does not support returnaddress */
+
+#      undef return_address
+#      define return_address(x) 0
+
+#    endif
+
 #    if defined(CONFIG_AVR_HAS_MEMX_PTR)
 /* I-space access qualifiers needed by Harvard architecture */
 
@@ -484,8 +559,8 @@
 /* CMSE extention */
 
 #  ifdef CONFIG_ARCH_HAVE_TRUSTZONE
-#    define cmse_nonsecure_entry __attribute__((cmse_nonsecure_entry))
-#    define cmse_nonsecure_call __attribute__((cmse_nonsecure_call))
+#    define tz_nonsecure_entry __attribute__((cmse_nonsecure_entry))
+#    define tz_nonsecure_call  __attribute__((cmse_nonsecure_call))
 #  endif
 
 /* SDCC-specific definitions ************************************************/
@@ -553,11 +628,19 @@
 /* SDCC does not support forced inlining. */
 
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+
+#  define visibility_hidden
+#  define visibility_default
 
 #  define unused_code
 #  define unused_data
@@ -570,12 +653,14 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* The reentrant attribute informs SDCC that the function
  * must be reentrant.  In this case, SDCC will store input
@@ -696,11 +781,18 @@
 #  define end_packed_struct
 #  define naked_function
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -711,11 +803,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 /* REVISIT: */
 
@@ -807,11 +901,18 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function inline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -822,11 +923,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -871,7 +974,7 @@
 
 /* Pre-processor */
 
-#  define CONFIG_CPP_HAVE_VARARGS 1 /* Supports variable argument macros */
+#  undef CONFIG_CPP_HAVE_VARARGS /* No variable argument macros */
 
 /* Intriniscs */
 
@@ -897,11 +1000,18 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function __forceinline
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -912,11 +1022,101 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
+#  define typeof __typeof__
+
+#  define FAR
+#  define NEAR
+#  define DSEG
+#  define CODE
+#  define IOBJ
+#  define IPTR
+
+#  undef  CONFIG_SMALL_MEMORY
+#  undef  CONFIG_LONG_IS_NOT_INT
+#  undef  CONFIG_PTR_IS_NOT_INT
+
+#  define UNUSED(a) ((void)(1 || &(a)))
+
+#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
+#  define return_address(x) 0
+
+#  define no_builtin(n)
+
+/* TASKING (Infineon AURIX C/C++)-specific definitions **********************/
+
+#elif defined(__TASKING__)
+
+/* Define these here and allow specific architectures to override as needed */
+
+#  define CONFIG_HAVE_LONG_LONG         1
+#  define CONFIG_HAVE_FLOAT             1
+#  define CONFIG_HAVE_DOUBLE            1
+#  define CONFIG_HAVE_LONG_DOUBLE       1
+
+/* Pre-processor */
+
+#  define CONFIG_CPP_HAVE_VARARGS       1 /* Supports variable argument macros */
+
+/* Intriniscs */
+
+#  define CONFIG_HAVE_FUNCTIONNAME      1 /* Has __FUNCTION__ */
+#  define CONFIG_HAVE_FILENAME          1 /* Has __FILE__ */
+
+#  undef  CONFIG_CPP_HAVE_WARNING
+#  undef  CONFIG_HAVE_WEAKFUNCTIONS
+#  define weak_alias(name, aliasname)
+#  define weak_data                     __attribute__((weak))
+#  define weak_function                 __attribute__((weak))
+#  define weak_const_function           __attribute__((weak, __const__))
+#  define restrict
+#  define noreturn_function
+#  define farcall_function              __attribute__((long_call))
+#  define predict_true(x) (x)
+#  define predict_false(x) (x)
+#  define aligned_data(n)               __attribute__((aligned(n)))
+#  define locate_code(n)                __attribute__((section(n)))
+#  define locate_data(n)                __attribute__((section(n)))
+#  define begin_packed_struct
+#  define end_packed_struct             __attribute__((packed))
+#  define reentrant_function
+#  define naked_function
+#  define always_inline_function        __attribute__((always_inline,no_instrument_function))
+#  define inline_function               __attribute__((always_inline)) inline
+#  define noinline_function             __attribute__((noinline))
+#  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function      __attribute__((optimize(0)))
+#  define nosanitize_address
+#  define nosanitize_undefined
+#  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
+#  define unused_code                   __attribute__((unused))
+#  define unused_data                   __attribute__((unused))
+#  define used_code                     __attribute__((used))
+#  define used_data                     __attribute__((used))
+#  define fopen_like
+#  define popen_like
+#  define malloc_like
+#  define malloc_like1(a)
+#  define malloc_like2(a, b)
+#  define realloc_like(a)
+#  define realloc_like2(a, b)
+#  define format_like(a)
+#  define printf_like(a, b)
+#  define syslog_like(a, b)
+#  define scanf_like(a, b)
+#  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -962,11 +1162,18 @@
 #  define reentrant_function
 #  define naked_function
 #  define always_inline_function
+#  define inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define noprofile_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
+#  define constructor_fuction
+#  define destructor_function
+#  define visibility_hidden
+#  define visibility_default
 #  define unused_code
 #  define unused_data
 #  define used_code
@@ -977,11 +1184,13 @@
 #  define malloc_like1(a)
 #  define malloc_like2(a, b)
 #  define realloc_like(a)
+#  define realloc_like2(a, b)
 #  define format_like(a)
 #  define printf_like(a, b)
 #  define syslog_like(a, b)
 #  define scanf_like(a, b)
 #  define strftime_like(a)
+#  define object_size(o, t) ((size_t)-1)
 
 #  define FAR
 #  define NEAR
@@ -1009,6 +1218,12 @@
 
 #ifndef CONFIG_HAVE_LONG_LONG
 #  undef CONFIG_FS_LARGEFILE
+#endif
+
+#ifdef CONFIG_DISABLE_FLOAT
+#  undef CONFIG_HAVE_FLOAT
+#  undef CONFIG_HAVE_DOUBLE
+#  undef CONFIG_HAVE_LONG_DOUBLE
 #endif
 
 /****************************************************************************

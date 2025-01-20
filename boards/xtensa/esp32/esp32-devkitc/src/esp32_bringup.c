@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32/esp32-devkitc/src/esp32_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,14 +29,10 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
-
 #include <errno.h>
 #if defined(CONFIG_ESP32_EFUSE)
 #include <nuttx/efuse/efuse.h>
@@ -92,8 +90,9 @@
 #  include "esp32_i2s.h"
 #endif
 
-#ifdef CONFIG_ESP32_PCNT_AS_QE
-#  include "board_qencoder.h"
+#ifdef CONFIG_ESP_PCNT
+#  include "espressif/esp_pcnt.h"
+#  include "esp32_board_pcnt.h"
 #endif
 
 #ifdef CONFIG_I2CMULTIPLEXER_TCA9548A
@@ -116,7 +115,7 @@
 #  include "esp32_sht3x.h"
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
 #  include "esp32_ms5611.h"
 #endif
 
@@ -137,7 +136,6 @@
 #endif
 
 #ifdef CONFIG_LCD_DEV
-#  include <nuttx/board.h>
 #  include <nuttx/lcd/lcd_dev.h>
 #endif
 
@@ -153,6 +151,10 @@
 #  include "esp32_spi.h"
 #endif
 
+#ifdef CONFIG_SPI_SLAVE_DRIVER
+#  include "esp32_board_spislavedev.h"
+#endif
+
 #ifdef CONFIG_LCD_BACKPACK
 #  include "esp32_lcd_backpack.h"
 #endif
@@ -161,8 +163,20 @@
 #  include "esp32_max6675.h"
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-#  include "esp32_rmt.h"
+#ifdef CONFIG_DAC
+#  include "esp32_board_dac.h"
+#endif
+
+#ifdef CONFIG_ESP_RMT
+#  include "esp32_board_rmt.h"
+#endif
+
+#ifdef CONFIG_ESP_MCPWM
+#  include "esp32_board_mcpwm.h"
+#endif
+
+#ifdef CONFIG_SYSTEM_NXDIAG_ESPRESSIF_CHIP_WO_TOOL
+#  include "espressif/esp_nxdiag.h"
 #endif
 
 #include "esp32-devkitc.h"
@@ -279,6 +293,22 @@ int esp32_bringup(void)
     }
 #endif /* CONFIG_ESP32_LEDC */
 
+#ifdef CONFIG_ESP_MCPWM_CAPTURE
+  ret = board_capture_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_capture_initialize failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_MCPWM_MOTOR_BDC
+  ret = board_motor_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_motor_initialize failed: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_SENSORS_MAX6675
   ret = board_max6675_initialize(0, 2);
   if (ret < 0)
@@ -329,6 +359,14 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
              ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32_OPENETH
+  ret = esp_openeth_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize Open ETH ethernet.\n");
     }
 #endif
 
@@ -432,16 +470,11 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_QENCODER
-  /* Initialize and register the qencoder driver */
-
-  ret = board_qencoder_initialize(0, PCNT_QE0_ID);
-  if (ret != OK)
+#ifdef CONFIG_ESP_PCNT
+  ret = board_pcnt_initialize();
+  if (ret < 0)
     {
-      syslog(LOG_ERR,
-             "ERROR: Failed to register the qencoder: %d\n",
-             ret);
-      return ret;
+      syslog(LOG_ERR, "ERROR: board_pcnt_initialize failed: %d\n", ret);
     }
 #endif
 
@@ -550,7 +583,7 @@ int esp32_bringup(void)
 
 #endif /* CONFIG_AUDIO_CS4344 */
 
-#endif  /* CONFIG_ESP32_I2S0 */
+#endif /* CONFIG_ESP32_I2S0 */
 
 #ifdef CONFIG_ESP32_I2S1
 
@@ -575,7 +608,7 @@ int esp32_bringup(void)
              CONFIG_ESP32_I2S1, ret);
     }
 
-#endif  /* CONFIG_ESP32_I2S1 */
+#endif /* CONFIG_ESP32_I2S1 */
 
 #endif /* CONFIG_ESP32_I2S */
 
@@ -590,7 +623,7 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SENSORS_MS5611
+#ifdef CONFIG_SENSORS_MS56XX
   /* Try to register MS5611 device in I2C0 as device 0: I2C addr 0x77 */
 
   ret = board_ms5611_initialize(0, 0);
@@ -637,11 +670,25 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_RMT
-  ret = board_rmt_initialize(RMT_CHANNEL, RMT_OUTPUT_PIN);
+#ifdef CONFIG_DAC
+  ret = board_dac_initialize(CONFIG_ESP32_DAC_DEVPATH);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: board_rmt_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: board_dac_initialize(0) failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP_RMT
+  ret = board_rmt_txinitialize(RMT_TXCHANNEL, RMT_OUTPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
+    }
+
+  ret = board_rmt_rxinitialize(RMT_RXCHANNEL, RMT_INPUT_PIN);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: board_rmt_txinitialize() failed: %d\n", ret);
     }
 #endif
 
@@ -656,19 +703,26 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SPI_DRIVER
-#  ifdef CONFIG_ESP32_SPI2
+#if defined(CONFIG_ESP32_SPI2) && defined(CONFIG_SPI_DRIVER)
   ret = board_spidev_initialize(ESP32_SPI2);
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SPI%d driver: %d\n",
              ESP32_SPI2, ret);
     }
-#  endif
+#endif
+
+# if defined(CONFIG_ESP32_SPI2) && defined(CONFIG_SPI_SLAVE_DRIVER)
+  ret = board_spislavedev_initialize(ESP32_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI%d Slave driver: %d\n",
+              ESP32_SPI2, ret);
+    }
 #endif
 
 #ifdef CONFIG_WS2812
-#  ifndef CONFIG_WS2812_NON_SPI_DRIVER 
+#  ifndef CONFIG_WS2812_NON_SPI_DRIVER
   ret = board_ws2812_initialize(0, ESP32_SPI3, CONFIG_WS2812_LED_COUNT);
   if (ret < 0)
     {
@@ -695,6 +749,14 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: board_apds9960_initialize() failed: %d\n",
              ret);
+    }
+#endif
+
+#ifdef CONFIG_SYSTEM_NXDIAG_ESPRESSIF_CHIP_WO_TOOL
+  ret = esp_nxdiag_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: esp_nxdiag_initialize failed: %d\n", ret);
     }
 #endif
 

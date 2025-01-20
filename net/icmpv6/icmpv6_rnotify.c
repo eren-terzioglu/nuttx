@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/icmpv6/icmpv6_rnotify.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -36,6 +38,7 @@
 #include <nuttx/net/netdev.h>
 
 #include "netdev/netdev.h"
+#include "netlink/netlink.h"
 #include "utils/utils.h"
 #include "icmpv6/icmpv6.h"
 
@@ -136,6 +139,7 @@ void icmpv6_setaddresses(FAR struct net_driver_s *dev,
         NTOHS(addr[4]), NTOHS(addr[5]), NTOHS(addr[6]), NTOHS(addr[7]));
 
   netdev_ipv6_add(dev, addr, preflen);
+  netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET6, addr, preflen);
 
   /* Finally, copy the router address */
 
@@ -289,7 +293,7 @@ int icmpv6_rwait(FAR struct icmpv6_rnotify_s *notify, unsigned int timeout)
  *
  ****************************************************************************/
 
-void icmpv6_rnotify(FAR struct net_driver_s *dev)
+void icmpv6_rnotify(FAR struct net_driver_s *dev, int result)
 {
   FAR struct icmpv6_rnotify_s *curr;
 
@@ -309,7 +313,7 @@ void icmpv6_rnotify(FAR struct net_driver_s *dev)
         {
           /* And signal the waiting, returning success */
 
-          curr->rn_result = OK;
+          curr->rn_result = result;
           nxsem_post(&curr->rn_sem);
           break;
         }

@@ -2078,7 +2078,7 @@ USB High-Speed Host
       CONFIG_USBMONITOR_PRIORITY=50    : USB monitor daemon priority
       CONFIG_USBMONITOR_INTERVAL=1     : Dump trace data every second
 
-  NOTE: If USB debug output is also enabled, both outpus will appear on the
+  NOTE: If USB debug output is also enabled, both outputs will appear on the
   serial console.  However, the debug output will be asynchronous with the
   trace output and, hence, difficult to interpret.
 
@@ -4386,11 +4386,11 @@ Configurations
 
        Relevant configuration options include:
 
-         CONFIG_NSH_ROMFSETC=y           : Enable mounting at of startup file system
-         CONFIG_NSH_ROMFSMOUNTPT="/etc"  : Mount at /etc
-         CONFIG_NSH_ROMFSDEVNO=0         : Device is /dev/ram0
-         CONFIG_NSH_ARCHROMFS=y          : ROMFS image is at
-                                           boards/arm/sama5/sama5d4-ek/include/nsh_romfsimg.h
+         CONFIG_ETC_ROMFS=y              : Enable mounting at of startup file system
+                                           ROMFS image is at
+                                           boards/arm/sama5/sama5d4-ek/src/etc_romfs.c
+         CONFIG_ETC_ROMFSMOUNTPT="/etc"  : Mount at /etc
+         CONFIG_ETC_ROMFSDEVNO=0         : Device is /dev/ram0
        The content of /etc/init.d/rcS can be see in the file rcS.template that
        can be found at: boards/arm/sama5/sama5d4-ek/include/rcS.template:
 

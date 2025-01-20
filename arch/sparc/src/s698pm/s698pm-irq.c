@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/sparc/src/s698pm/s698pm-irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -170,7 +172,7 @@ int s698pm_cpuint_initialize(void)
 #ifdef CONFIG_SMP
   /* Which CPU are we initializing */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 #endif
 
@@ -185,7 +187,7 @@ int s698pm_cpuint_initialize(void)
 #if defined CONFIG_SMP
   /* Attach IPI interrupts */
 
-  irq_attach(S698PM_IPI_IRQ, s698pm_pause_handler, NULL);
+  irq_attach(S698PM_IPI_IRQ, s698pm_smp_call_handler, NULL);
 
   (void)s698pm_setup_irq(cpu, S698PM_IPI_IRQ, 0);
 
@@ -499,27 +501,7 @@ int up_prioritize_irq(int irq, int priority)
 }
 
 /****************************************************************************
- * Name: sparc_intstack_top
- *
- * Description:
- *   Return a pointer to the top the correct interrupt stack allocation
- *   for the current CPU.
- *
- ****************************************************************************/
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t sparc_intstack_top(void)
-{
-#if defined(CONFIG_SMP)
-  return g_cpu_intstack_top[up_cpu_index()];
-#else
-  return g_cpu_intstack_top[0];
-#endif
-}
-#endif
-
-/****************************************************************************
- * Name: sparc_intstack_alloc
+ * Name: up_get_intstackbase
  *
  * Description:
  *   Return a pointer to the "alloc" the correct interrupt stack allocation
@@ -528,10 +510,10 @@ uintptr_t sparc_intstack_top(void)
  ****************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t sparc_intstack_alloc(void)
+uintptr_t up_get_intstackbase(int cpu)
 {
 #if defined(CONFIG_SMP)
-  return g_cpu_intstack_top[up_cpu_index()] - INTSTACK_SIZE;
+  return g_cpu_intstack_top[cpu] - INTSTACK_SIZE;
 #else
   return g_cpu_intstack_top[0] - INTSTACK_SIZE;
 #endif

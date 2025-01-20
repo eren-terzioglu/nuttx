@@ -59,9 +59,8 @@ extern "C"
  *+-------------------------------------------------------------------------+
  */
 
-/**
- * @brief Naming conventions: RESET_REASON_{reset level}_{reset reason}
- * @note refer to TRM: <Reset and Clock> chapter
+/* Naming conventions: RESET_REASON_{reset level}_{reset reason}
+ * Note refer to TRM: <Reset and Clock> chapter
  */
 
 typedef enum
@@ -91,6 +90,16 @@ typedef enum
   RESET_REASON_CORE_USB_JTAG   = 0x16, /* USB JTAG resets the digital core */
   RESET_REASON_CORE_PWR_GLITCH = 0x17, /* Glitch on power resets the digital core */
 } soc_reset_reason_t;
+
+/****************************************************************************
+ * Name: esp32s3_reset_reasons
+ *
+ * Description:
+ *   Get the cause of the last reset of the given CPU
+ *
+ ****************************************************************************/
+
+soc_reset_reason_t esp32s3_reset_reasons(int cpu);
 
 #ifdef __cplusplus
 }

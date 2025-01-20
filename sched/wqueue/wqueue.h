@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/wqueue/wqueue.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,6 +34,8 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/queue.h>
+#include <nuttx/wqueue.h>
+#include <nuttx/spinlock.h>
 
 #ifdef CONFIG_SCHED_WORKQUEUE
 
@@ -55,6 +59,7 @@ struct kworker_s
   pid_t             pid;       /* The task ID of the worker thread */
   FAR struct work_s *work;     /* The work structure */
   sem_t             wait;      /* Sync waiting for worker done */
+  int16_t           wait_count;
 };
 
 /* This structure defines the state of one kernel-mode work queue */
@@ -63,7 +68,12 @@ struct kwork_wqueue_s
 {
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
-  struct kworker_s  worker[1]; /* Describes a worker thread */
+  sem_t             exsem;     /* Sync waiting for thread exit */
+  spinlock_t        lock;      /* Spinlock */
+  uint8_t           nthreads;  /* Number of worker threads */
+  bool              exit;      /* A flag to request the thread to exit */
+  int16_t           wait_count;
+  struct kworker_s  worker[0]; /* Describes a worker thread */
 };
 
 /* This structure defines the state of one high-priority work queue.  This
@@ -75,6 +85,11 @@ struct hp_wqueue_s
 {
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
+  sem_t             exsem;     /* Sync waiting for thread exit */
+  spinlock_t        lock;      /* Spinlock */
+  uint8_t           nthreads;  /* Number of worker threads */
+  bool              exit;      /* A flag to request the thread to exit */
+  int16_t           wait_count;
 
   /* Describes each thread in the high priority queue's thread pool */
 
@@ -91,6 +106,11 @@ struct lp_wqueue_s
 {
   struct dq_queue_s q;         /* The queue of pending work */
   sem_t             sem;       /* The counting semaphore of the wqueue */
+  sem_t             exsem;     /* Sync waiting for thread exit */
+  spinlock_t        lock;      /* Spinlock */
+  uint8_t           nthreads;  /* Number of worker threads */
+  bool              exit;      /* A flag to request the thread to exit */
+  int16_t           wait_count;
 
   /* Describes each thread in the low priority queue's thread pool */
 
@@ -118,6 +138,27 @@ extern struct lp_wqueue_s g_lpwork;
  * Public Function Prototypes
  ****************************************************************************/
 
+static inline_function FAR struct kwork_wqueue_s *work_qid2wq(int qid)
+{
+#ifdef CONFIG_SCHED_HPWORK
+  if (qid == HPWORK)
+    {
+      return (FAR struct kwork_wqueue_s *)&g_hpwork;
+    }
+  else
+#endif
+#ifdef CONFIG_SCHED_LPWORK
+  if (qid == LPWORK)
+    {
+      return (FAR struct kwork_wqueue_s *)&g_lpwork;
+    }
+  else
+#endif
+    {
+      return NULL;
+    }
+}
+
 /****************************************************************************
  * Name: work_start_highpri
  *
@@ -128,7 +169,7 @@ extern struct lp_wqueue_s g_lpwork;
  *   None
  *
  * Returned Value:
- *   The task ID of the worker thread is returned on success.  A negated
+ *   Return zero (OK) on success.  A negated errno value is returned on
  *   errno value is returned on failure.
  *
  ****************************************************************************/
@@ -147,7 +188,7 @@ int work_start_highpri(void);
  *   None
  *
  * Returned Value:
- *   The task ID of the worker thread is returned on success.  A negated
+ *   Return zero (OK) on success.  A negated errno value is returned on
  *   errno value is returned on failure.
  *
  ****************************************************************************/

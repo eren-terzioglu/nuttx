@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/arm/src/armv7-r/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -24,8 +26,7 @@ set(SRCS arm_vectortab.S)
 
 # Common assembly language files
 
-list(APPEND SRCS arm_head.S arm_vectoraddrexcptn.S arm_vectors.S
-     arm_saveusercontext.S)
+list(APPEND SRCS arm_head.S arm_vectors.S arm_saveusercontext.S)
 
 # Common C source files
 
@@ -71,9 +72,8 @@ if(CONFIG_SMP)
     APPEND
     SRCS
     arm_cpuhead.S
-    arm_cpuindex.c
     arm_cpustart.c
-    arm_cpupause.c
+    arm_smpcall.c
     arm_cpuidlestack.c
     arm_scu.c)
 endif()

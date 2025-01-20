@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_rtc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -758,7 +760,7 @@ static int rtchw_set_alrmar(rtc_alarmreg_t alarmreg)
 
   putreg32(alarmreg, STM32_RTC_ALRMAR);
   putreg32(0, STM32_RTC_ALRMASSR);
-  rtcinfo("  ALRMAR: %08x\n", getreg32(STM32_RTC_ALRMAR));
+  rtcinfo("  ALRMAR: %08" PRIx32 "\n", getreg32(STM32_RTC_ALRMAR));
 
   /* Enable RTC alarm A */
 

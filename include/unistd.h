@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/unistd.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -46,8 +48,6 @@
 #undef  _POSIX_SAVED_IDS
 #undef  _POSIX_JOB_CONTROL
 #define _POSIX_MESSAGE_PASSING 1
-#undef  _POSIX_MAPPED_FILES
-#undef  _POSIX_SHARED_MEMORY_OBJECTS
 #define _POSIX_PRIORITY_SCHEDULING 1
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
 #  define _POSIX_TIMERS 1
@@ -59,6 +59,9 @@
 #undef  _POSIX_MEMLOCK_RANGE
 #undef  _POSIX_FSYNC
 #define _POSIX_SYNCHRONIZED_IO 1
+#ifdef CONFIG_LIBC_PASSWD_LINESIZE
+#  define _POSIX_GETPW_R_SIZE_MAX CONFIG_LIBC_PASSWD_LINESIZE
+#endif
 
 #define _POSIX_VERSION 201712L
 #define _POSIX_PRIORITIZED_IO _POSIX_VERSION
@@ -67,6 +70,10 @@
 #define _POSIX_REALTIME_SIGNALS _POSIX_VERSION
 #define _POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_VERSION
 #define _POSIX_SEMAPHORES _POSIX_VERSION
+#define _POSIX_SHARED_MEMORY_OBJECTS _POSIX_VERSION
+#define _POSIX_THREAD_PROCESS_SHARED _POSIX_VERSION
+#define _POSIX_MAPPED_FILES _POSIX_VERSION
+#define _POSIX_THREADS _POSIX_VERSION
 
 #ifdef CONFIG_FS_AIO
 #  define _POSIX_ASYNCHRONOUS_IO _POSIX_VERSION
@@ -91,6 +98,9 @@
 #define _POSIX_SYNC_IO 1
 #undef  _POSIX_ASYNC_IO
 #undef  _POSIX_PRIO_IO
+
+#define _XOPEN_UNIX 1
+#define _XOPEN_VERSION 700L
 
 /* Constants used with POSIX pathconf().  pathconf() will return -1 and set
  * errno to ENOSYS for most of these.
@@ -289,6 +299,18 @@
 #  define execvpe                        execve
 #endif
 
+/* Commands for lockf()
+ * F_ULOCK - Unlock
+ * F_LOCK  - Blocking Exclusive Lock
+ * F_TLOCK - Attempted Exclusive Locking
+ * F_TEST  - Test Locked Status
+ */
+
+#define F_ULOCK                          0
+#define F_LOCK                           1
+#define F_TLOCK                          2
+#define F_TEST                           3
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -337,6 +359,7 @@ ssize_t pread(int fd, FAR void *buf, size_t nbytes, off_t offset);
 ssize_t pwrite(int fd, FAR const void *buf, size_t nbytes, off_t offset);
 int     ftruncate(int fd, off_t length);
 int     fchown(int fd, uid_t owner, gid_t group);
+int     lockf(int fd, int cmd, off_t len);
 
 /* Check if a file descriptor corresponds to a terminal I/O file */
 
@@ -366,6 +389,7 @@ unsigned int alarm(unsigned int seconds);
 int     chdir(FAR const char *path);
 int     fchdir(int fd);
 FAR char *getcwd(FAR char *buf, size_t size);
+FAR char *get_current_dir_name(void);
 
 /* File path operations */
 
@@ -442,6 +466,16 @@ int     getentropy(FAR void *buffer, size_t length);
 
 void    sync(void);
 int     syncfs(int fd);
+
+int     profil(FAR unsigned short *buf, size_t bufsiz,
+               size_t offset, unsigned int scale);
+
+FAR char *getpass(FAR const char *prompt);
+#ifdef CONFIG_CRYPTO
+FAR char *crypt(FAR const char *key, FAR const char *salt);
+FAR char *crypt_r(FAR const char *key, FAR const char *salt,
+                  FAR char *output);
+#endif
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(getcwd) FAR char *getcwd(FAR char *buf,

@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/locale/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -19,6 +21,17 @@
 # ##############################################################################
 
 if(CONFIG_LIBC_LOCALE)
-  target_sources(c PRIVATE lib_duplocale.c lib_freelocale.c lib_localeconv.c
-                           lib_newlocale.c lib_setlocale.c lib_uselocale.c)
+  target_sources(
+    c
+    PRIVATE lib_duplocale.c
+            lib_freelocale.c
+            lib_localeconv.c
+            lib_newlocale.c
+            lib_setlocale.c
+            lib_uselocale.c
+            lib_catalog.c
+            lib_gettext.c
+            lib_langinfo.c
+            lib_iconv.c
+            lib_maxlocale.c)
 endif()

@@ -9,6 +9,14 @@
 
 menu "Architecture-Specific Support"
 
+config LIBC_ARCH_ATOMIC
+	bool "arch_atomic"
+	default n
+	---help---
+		If this configuration is selected and <include/nuttx/atomic.h> is
+		included, arch_atomic.c will be linked instead of built-in
+		atomic function.
+
 config ARCH_LOWPUTC
 	bool "Low-level console output"
 	default y
@@ -43,10 +51,6 @@ config ARCH_ROMGETC
 
 # Default settings for C library functions that may be replaced with
 # architecture-specific versions.
-
-config LIBC_ARCH_ATOMIC
-	bool
-	default n
 
 config LIBC_ARCH_MEMCHR
 	bool
@@ -125,6 +129,14 @@ config LIBC_ARCH_STRCASECMP
 	default n
 
 config LIBC_ARCH_STRNCASECMP
+	bool
+	default n
+
+config LIBC_ARCH_STPCPY
+	bool
+	default n
+
+config LIBC_ARCH_STPNCPY
 	bool
 	default n
 
@@ -787,6 +799,9 @@ source "libs/libc/machine/sim/Kconfig"
 endif
 if ARCH_X86
 source "libs/libc/machine/x86/Kconfig"
+endif
+if ARCH_X86_64
+source "libs/libc/machine/x86_64/Kconfig"
 endif
 if ARCH_XTENSA
 source "libs/libc/machine/xtensa/Kconfig"

@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv8-m/gnu/arch_strcmp.S
  *
- * Copyright (c) 2012-2014 ARM Ltd
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2012-2014 ARM Ltd
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,14 @@
 #include "libc.h"
 
 #ifdef LIBC_BUILD_STRCMP
+
+#ifndef __ARM_FEATURE_BTI_DEFAULT
+#  define __ARM_FEATURE_BTI_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_PAC_DEFAULT
+#  define __ARM_FEATURE_PAC_DEFAULT 0
+#endif
 
 #ifdef __ARM_BIG_ENDIAN
 #define S2LO lsl
@@ -80,9 +88,16 @@
 
 	.thumb
 	.syntax unified
-def_fn strcmp
+def_fn ARCH_LIBCFUN(strcmp)
 	.cfi_sections .debug_frame
 	.cfi_startproc
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	eor	tmp1, src1, src2
 	tst	tmp1, #3
 	/* Strings not at same byte offset from a word boundary.  */
@@ -143,6 +158,9 @@ def_fn strcmp
 	lsrs	result, result, #24
 	subs	result, result, data2
 #endif
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 
@@ -251,6 +269,9 @@ def_fn strcmp
 	cmpcs	data1, data2
 	beq	.Lstrcmp_unaligned
 	sub	result, data1, data2
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 2:
@@ -393,6 +414,9 @@ def_fn strcmp
 	ldmfd	sp!, {r5}
 	.cfi_restore 5
 	.cfi_def_cfa_offset 0
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 .Lstrcmp_tail:
@@ -410,8 +434,11 @@ def_fn strcmp
 	ldmfd	sp!, {r5}
 	.cfi_restore 5
 	.cfi_def_cfa_offset 0
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 	.cfi_endproc
-	.size strcmp, . - strcmp
+	.size ARCH_LIBCFUN(strcmp), . - ARCH_LIBCFUN(strcmp)
 
 #endif

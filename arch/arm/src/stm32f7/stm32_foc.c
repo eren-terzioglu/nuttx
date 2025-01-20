@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32f7/stm32_foc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -718,6 +720,7 @@ static struct foc_lower_ops_s g_stm32_foc_ops =
   .start          = stm32_foc_start,
   .pwm_duty_set   = stm32_foc_pwm_duty_set,
   .pwm_off        = stm32_foc_pwm_off,
+  .info_get       = stm32_foc_info_get,
   .ioctl          = stm32_foc_ioctl,
   .bind           = stm32_foc_bind,
   .fault_clear    = stm32_foc_fault_clear,

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/nrf53/nrf53_serial.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,4 +51,4 @@
 void nrf53_earlyserialinit(void);
 #endif
 
-#endif /* __ARCH_ARM_SRC_NRF53_NRF53@_SERIAL_H */
+#endif /* __ARCH_ARM_SRC_NRF53_NRF53_SERIAL_H */

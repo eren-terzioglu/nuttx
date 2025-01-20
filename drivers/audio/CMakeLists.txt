@@ -1,6 +1,8 @@
 # ##############################################################################
 # drivers/audio/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,13 +24,6 @@
 
 if(CONFIG_DRIVERS_AUDIO)
   set(SRCS)
-
-  if(CONFIG_AUDIO_CXD56)
-    list(APPEND SRCS cxd56.c)
-    if(CONFIG_AUDIO_CXD56_SRC)
-      list(APPEND SRCS cxd56_src.c)
-    endif()
-  endif()
 
   if(CONFIG_AUDIO_VS1053)
     list(APPEND SRCS vs1053.c)

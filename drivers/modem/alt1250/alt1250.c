@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/modem/alt1250/alt1250.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -640,6 +642,7 @@ static int alt1250_power_control(FAR struct alt1250_dev_s *dev,
 
 #ifdef CONFIG_PM
       case LTE_CMDID_STOPAPI:
+      case LTE_CMDID_RESTARTAPI:
       case LTE_CMDID_SUSPEND:
         alt1250_receive_daemon_response(req);
         break;
@@ -819,7 +822,7 @@ static int parse_altcompkt(FAR struct alt1250_dev_s *dev, FAR uint8_t *pkt,
   uint16_t cid = parse_cid(h);
   uint16_t tid = parse_tid(h);
   parse_handler_t parser;
-  FAR alt_evtbuf_inst_t *inst;
+  FAR alt_evtbuf_inst_t *inst = NULL;
   FAR void **outparam;
   size_t outparamlen;
 
@@ -855,6 +858,24 @@ static int parse_altcompkt(FAR struct alt1250_dev_s *dev, FAR uint8_t *pkt,
       if (*container)
         {
           (*container)->result = -ENOSYS;
+          *bitmap = get_bitmap(dev, cid, get_altver(h));
+          if (LTE_IS_ASYNC_CMD((*container)->cmdid))
+            {
+              /* Asynchronous types need to call the callback corresponding
+               * to the received event, so the REPLY bit is added to the
+               * received event.
+               */
+
+              *bitmap |= ALT1250_EVTBIT_REPLY;
+            }
+          else
+            {
+              /* Synchronous types do not call a callback,
+               * so only the REPLY bit is needed.
+               */
+
+              *bitmap = ALT1250_EVTBIT_REPLY;
+            }
         }
 
       return *container == NULL ? ERROR: OK;
@@ -912,7 +933,7 @@ static int parse_altcompkt(FAR struct alt1250_dev_s *dev, FAR uint8_t *pkt,
           *bitmap = ALT1250_EVTBIT_REPLY;
         }
     }
-  else
+  else if (inst != NULL)
     {
       /* Unlock outparam because it has been updated. */
 
@@ -1379,6 +1400,19 @@ static int alt1250_pm_prepare(struct pm_callback_s *cb, int domain,
         }
 
       ret = alt1250_send_daemon_request(ALT1250_EVTBIT_STOPAPI);
+
+      if (ret)
+        {
+          return ERROR;
+        }
+      else
+        {
+          return OK;
+        }
+    }
+  else if (pmstate == PM_NORMAL)
+    {
+      ret = alt1250_send_daemon_request(ALT1250_EVTBIT_RESTARTAPI);
 
       if (ret)
         {

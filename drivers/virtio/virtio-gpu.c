@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/virtio/virtio-gpu.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -63,6 +65,7 @@ struct virtio_gpu_priv_s
   fb_coord_t yres;                  /* Vertical resolution in pixel rows */
   fb_coord_t stride;                /* Width of a row in bytes */
   uint8_t display;                  /* Display number */
+  spinlock_t lock;                  /* Lock */
 };
 
 struct virtio_gpu_cookie_s
@@ -133,12 +136,16 @@ static FAR struct virtio_gpu_priv_s *g_virtio_gpu[VIRTIO_GPU_MAX_DISP];
 
 /****************************************************************************
  * Name: virtio_gpu_send_cmd
+ * Note: the caller should not touch `buf` after calling this, as it will be
+ *       freed either here or in virtio_gpu_done().
  ****************************************************************************/
 
 static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
                                FAR struct virtqueue_buf *buf_list,
                                int readable, int writable, FAR void *buf)
 {
+  FAR struct virtio_gpu_priv_s *priv = vq->vq_dev->priv;
+  irqstate_t flags;
   int ret;
 
   if (writable > 0)
@@ -146,14 +153,21 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
       sem_t sem;
       struct virtio_gpu_cookie_s cookie;
 
+      virtio_free_buf(vq->vq_dev, buf);
       nxsem_init(&sem, 0, 0);
       cookie.blocking = true;
       cookie.p = &sem;
+      flags = spin_lock_irqsave(&priv->lock);
       ret = virtqueue_add_buffer(vq, buf_list, readable, writable, &cookie);
       if (ret >= 0)
         {
           virtqueue_kick(vq);
+          spin_unlock_irqrestore(&priv->lock, flags);
           nxsem_wait(&sem);
+        }
+      else
+        {
+          spin_unlock_irqrestore(&priv->lock, flags);
         }
 
       nxsem_destroy(&sem);
@@ -172,17 +186,24 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
         {
           cookie->blocking = false;
           cookie->p = buf;
+          flags = spin_lock_irqsave(&priv->lock);
           ret = virtqueue_add_buffer(vq, buf_list, readable, writable,
                                      cookie);
           if (ret >= 0)
             {
               virtqueue_kick(vq);
+              spin_unlock_irqrestore(&priv->lock, flags);
             }
           else
             {
-              virtio_free_buf(vq->vq_dev, buf);
+              spin_unlock_irqrestore(&priv->lock, flags);
               kmm_free(cookie);
             }
+        }
+
+      if (buf && ret < 0)
+        {
+          virtio_free_buf(vq->vq_dev, buf);
         }
     }
 
@@ -195,9 +216,11 @@ static int virtio_gpu_send_cmd(FAR struct virtqueue *vq,
 
 static void virtio_gpu_done(FAR struct virtqueue *vq)
 {
+  FAR struct virtio_gpu_priv_s *priv = vq->vq_dev->priv;
   FAR struct virtio_gpu_cookie_s *cookie;
 
-  while ((cookie = virtqueue_get_buffer(vq, NULL, NULL)) != NULL)
+  while ((cookie =
+          virtqueue_get_buffer_lock(vq, NULL, NULL, &priv->lock)) != NULL)
     {
       if (cookie->blocking)
         {
@@ -222,6 +245,7 @@ static int virtio_gpu_init(FAR struct virtio_gpu_priv_s *priv,
   vq_callback callbacks[VIRTIO_GPU_NUM];
   int ret;
 
+  spin_lock_init(&priv->lock);
   priv->vdev = vdev;
   vdev->priv = priv;
 
@@ -234,7 +258,7 @@ static int virtio_gpu_init(FAR struct virtio_gpu_priv_s *priv,
   vqnames[VIRTIO_GPU_CTL]   = "virtio_gpu_ctl";
   callbacks[VIRTIO_GPU_CTL] = virtio_gpu_done;
   ret = virtio_create_virtqueues(vdev, 0, VIRTIO_GPU_NUM, vqnames,
-                                 callbacks);
+                                 callbacks, NULL);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d", ret);
@@ -570,7 +594,7 @@ static int virtio_gpu_probe(FAR struct virtio_device *vdev)
   g_virtio_gpu[disp] = priv;
   priv->display = disp;
 
-  ret = fb_register(disp, 0);
+  ret = virtio_gpu_fb_register(disp);
   if (ret < 0)
     {
       vrterr("ERROR: Failed to initialize framebuffer driver, ret=%d",
@@ -690,53 +714,41 @@ int virtio_register_gpu_driver(void)
 }
 
 /****************************************************************************
- * Name: up_fbinitialize
+ * Name: virtio_gpu_fb_register
  *
  * Description:
  *   Initialize the framebuffer video hardware associated with the display.
  *
  * Input Parameters:
- *   display - In the case of hardware with multiple displays, this
- *     specifies the display.  Normally this is zero.
+ *   display - The display number for the case of boards supporting multiple
+ *             displays or for hardware that supports multiple
+ *             layers (each layer is consider a display).  Typically zero.
  *
  * Returned Value:
- *   Zero is returned on success; a negated errno value is returned on any
+ *   Zero (OK) is returned success; a negated errno value is returned on any
  *   failure.
  *
  ****************************************************************************/
 
-int up_fbinitialize(int display)
+int virtio_gpu_fb_register(int display)
 {
-  return display < VIRTIO_GPU_MAX_DISP ? OK : -EINVAL;
-}
+  FAR struct fb_vtable_s *vtable;
 
-/****************************************************************************
- * Name: up_fbgetvplane
- *
- * Description:
- *   Return a reference to the framebuffer object for the specified video
- *   plane of the specified plane.
- *   Many OSDs support multiple planes of video.
- *
- * Input Parameters:
- *   display - In the case of hardware with multiple displays, this
- *     specifies the display. Normally this is zero.
- *   vplane - Identifies the plane being queried.
- *
- * Returned Value:
- *   A non-NULL pointer to the frame buffer access structure is returned on
- *   success; NULL is returned on any failure.
- *
- ****************************************************************************/
-
-FAR struct fb_vtable_s *up_fbgetvplane(int display, int vplane)
-{
   if (display < 0 || display >= VIRTIO_GPU_MAX_DISP ||
-      vplane < 0 || vplane >= VIRTIO_GPU_MAX_PLANE || !g_virtio_gpu[display])
+     !g_virtio_gpu[display])
     {
-      vrterr("get vplane (%d,%d) failed", display, vplane);
-      return NULL;
+      vrterr("ERROR: display number %d is out of range [%d, %d]",
+             display, 0, VIRTIO_GPU_MAX_DISP - 1);
+      return -EINVAL;
     }
 
-  return &g_virtio_gpu[display]->vtable;
+  vtable =  &g_virtio_gpu[display]->vtable;
+
+  if (vtable == NULL)
+    {
+      vrterr("ERROR: get vtable failed\n");
+      return -EINVAL;
+    }
+
+  return fb_register_device(display, 0, vtable);
 }

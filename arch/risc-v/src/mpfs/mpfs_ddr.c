@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_ddr.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -48,6 +50,7 @@
 #include "hardware/mpfs_sysreg.h"
 #include "hardware/mpfs_ddr.h"
 #include "hardware/mpfs_sgmii.h"
+#include "hardware/mpfs_mpucfg.h"
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_start.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,25 +51,17 @@
 #  define showprogress(c)
 #endif
 
-#if defined (CONFIG_BUILD_KERNEL) && !defined (CONFIG_ARCH_USE_S_MODE)
+#if defined(CONFIG_BUILD_KERNEL) && !defined(CONFIG_ARCH_USE_S_MODE)
 #  error "Target requires kernel in S-mode, enable CONFIG_ARCH_USE_S_MODE"
+#endif
+
+#if defined(CONFIG_SMP) && !defined(CONFIG_RISCV_PERCPU_SCRATCH)
+#  error "Target requires CONFIG_RISCV_PERCPU_SCRATCH if CONFIG_SMP is set"
 #endif
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
-
-/* g_idle_topstack: _sbss is the start of the BSS region as defined by the
- * linker script. _ebss lies at the end of the BSS region. The idle task
- * stack starts at the end of BSS and is of size CONFIG_IDLETHREAD_STACKSIZE.
- * The IDLE thread is the thread that the system boots on and, eventually,
- * becomes the IDLE, do nothing task that runs only when there is nothing
- * else to run.  The heap continues from there until the end of memory.
- * g_idle_topstack is a read-only variable the provides this computed
- * address.
- */
-
-uintptr_t g_idle_topstack = MPFS_IDLESTACK_TOP;
 
 /****************************************************************************
  * Public Functions
@@ -87,6 +81,13 @@ void __mpfs_start(uint64_t mhartid)
   if (mhartid != 0)
     {
       riscv_fpuconfig();
+    }
+
+  /* CPU 0 handles the boot, the rest wait */
+
+  if (riscv_hartid_to_cpuid(mhartid) != 0)
+    {
+      goto cpux;
     }
 
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
@@ -111,9 +112,18 @@ void __mpfs_start(uint64_t mhartid)
       *dest++ = *src++;
     }
 
+#ifdef CONFIG_RISCV_PERCPU_SCRATCH
+  /* Initialize the per CPU areas */
+
+  if (mhartid != 0)
+    {
+      riscv_percpu_add_hart(mhartid);
+    }
+#endif /* CONFIG_RISCV_PERCPU_SCRATCH */
+
   /* Setup PLL if not already provided */
 
-#ifdef CONFIG_MPFS_BOOTLOADER
+#ifdef CONFIG_MPFS_CLKINIT
   mpfs_clockconfig();
 #endif
 
@@ -149,15 +159,6 @@ void __mpfs_start(uint64_t mhartid)
 
   mpfs_boardinitialize();
 
-#ifdef CONFIG_ARCH_USE_S_MODE
-  /* Initialize the per CPU areas */
-
-  if (mhartid != 0)
-    {
-      riscv_percpu_add_hart(mhartid);
-    }
-#endif /* CONFIG_ARCH_USE_S_MODE */
-
   /* Initialize the caches.  Should only be executed from E51 (hart 0) to be
    * functional.  Consider the caches already configured if running without
    * the CONFIG_MPFS_BOOTLOADER -option.
@@ -192,6 +193,22 @@ void __mpfs_start(uint64_t mhartid)
   nx_start();
 
   showprogress('a');
+
+cpux:
+
+#ifdef CONFIG_SMP
+  /* Disable local interrupts */
+
+  up_irq_save();
+
+  /* Initialize local PLIC */
+
+  mpfs_plic_init_hart(mhartid);
+
+  /* Then wait for the boot core to start us */
+
+  riscv_cpu_boot(riscv_hartid_to_cpuid(mhartid));
+#endif
 
   while (true)
     {

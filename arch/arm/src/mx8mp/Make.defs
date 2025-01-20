@@ -1,6 +1,8 @@
 ############################################################################
 # arch/arm/src/mx8mp/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -42,4 +44,8 @@ endif
 
 ifeq ($(CONFIG_SPI),y)
 CHIP_CSRCS += mx8mp_ecspi.c
+endif
+
+ifeq ($(CONFIG_MX8MP_RPMSG),y)
+CHIP_CSRCS += mx8mp_rptun.c mx8mp_ipc.c mx8mp_rsctable.c
 endif

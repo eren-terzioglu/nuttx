@@ -49,6 +49,7 @@ if DRIVERS_VIDEO
 config VIDEO_FB
 	bool "Framebuffer character driver"
 	default n
+	select ARCH_VMA_MAPPING if BUILD_KERNEL
 
 config VIDEO_FB_NPOLLWAITERS
 	int "Video fb poll count of each open structure"
@@ -66,6 +67,29 @@ config GOLDFISH_FB
 	depends on VIDEO_FB
 	default n
 
+config GOLDFISH_GPU_FB
+	bool "Goldfish GPU Framebuffer character driver"
+	depends on VIDEO_FB
+	default n
+
+choice
+	prompt "Select Goldfish GPU Framebuffer format"
+	default GOLDFISH_GPU_FB_RGB565
+	depends on GOLDFISH_GPU_FB
+
+config GOLDFISH_GPU_FB_RGB565
+	bool "RGB565"
+
+config GOLDFISH_GPU_FB_BGRA8888
+	bool "BGRA8888"
+
+endchoice
+
+config GOLDFISH_GPU_FB_PRIORITY
+	int "Goldfish GPU Framebuffer vsync task priority"
+	depends on GOLDFISH_GPU_FB
+	default 100
+
 config GOLDFISH_FB_VIDEO_MODE
 	bool "Goldfish Framebuffer display mode"
 	depends on GOLDFISH_FB
@@ -73,16 +97,6 @@ config GOLDFISH_FB_VIDEO_MODE
 	---help---
 		GOLDFISH_FB_VIDEO_MODE = y  enable video mode
 		GOLDFISH_FB_VIDEO_MODE = n  enable command mode
-
-config GOLDFISH_FB_IRQ
-	int "Goldfish fb irq"
-	depends on GOLDFISH_FB
-	default 48
-
-config GOLDFISH_FB_BASE
-	hex "Goldfish fb base"
-	depends on GOLDFISH_FB
-	default 0x0a020000
 
 config GOLDFISH_FB_FRAME_NBUFFER
 	int "Goldfish fb vsync size"

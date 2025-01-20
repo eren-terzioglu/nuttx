@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/at32/hardware/at32f43xxx_gpio.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,7 +42,7 @@
 #define AT32_GPIO_MUXL_OFFSET           (0x20) /* GPIO muxing register (pin0~7) */
 #define AT32_GPIO_MUXH_OFFSET           (0x24) /* GPIO muxing register (pin8~15)*/
 #define AT32_GPIO_CLR_OFFSET            (0x28) /* GPIO clear bit */
-#define AT32_GPIO_HDRV_OFFSET           (0x3C) /* GPIO high driver */    
+#define AT32_GPIO_HDRV_OFFSET           (0x3C) /* GPIO high driver */
 
 /* Register Addresses *******************************************************/
 

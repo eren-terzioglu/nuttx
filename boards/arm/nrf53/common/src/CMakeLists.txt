@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/nrf53/common/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -30,6 +32,26 @@ if(CONFIG_ARCH_BOARD_COMMON)
 
   if(CONFIG_NRF53_PROGMEM)
     list(APPEND SRCS nrf53_progmem.c)
+  endif()
+
+  if(CONFIG_BOARDCTL_RESET)
+    list(APPEND SRCS nrf53_reset.c)
+  endif()
+
+  if(CONFIG_SENSORS_BMI270)
+    list(APPEND SRCS nrf53_bmi270.c)
+  endif()
+
+  if(CONFIG_SENSORS_ADXL362)
+    list(APPEND SRCS nrf53_adxl362.c)
+  endif()
+
+  if(CONFIG_SENSORS_BH1749NUC)
+    list(APPEND SRCS nrf53_bh1749nuc.c)
+  endif()
+
+  if(CONFIG_SENSORS_BMM150)
+    list(APPEND SRCS nrf53_bmm150.c)
   endif()
 
   target_sources(board PRIVATE ${SRCS})

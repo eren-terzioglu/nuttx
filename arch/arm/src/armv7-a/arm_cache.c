@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/armv7-a/arm_cache.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,9 +28,9 @@
 #include <nuttx/cache.h>
 #include <nuttx/irq.h>
 #include <sys/param.h>
+#include <arch/barriers.h>
 
 #include "cp15_cacheops.h"
-#include "barriers.h"
 #include "l2cc.h"
 
 /****************************************************************************
@@ -304,6 +306,9 @@ void up_invalidate_dcache_all(void)
 
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
+#ifdef CONFIG_SMP
+  cp15_clean_dcache(start, end);
+#else
   if ((end - start) < cp15_dcache_size())
     {
       cp15_clean_dcache(start, end);
@@ -312,6 +317,7 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
     {
       cp15_clean_dcache_all();
     }
+#endif
 
   l2cc_clean(start, end);
 }
@@ -368,6 +374,9 @@ void up_clean_dcache_all(void)
 
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
+#ifdef CONFIG_SMP
+  cp15_flush_dcache(start, end);
+#else
   if ((end - start) < cp15_dcache_size())
     {
       cp15_flush_dcache(start, end);
@@ -376,6 +385,7 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
     {
       cp15_flush_dcache_all();
     }
+#endif
 
   l2cc_flush(start, end);
 }
@@ -424,6 +434,15 @@ void up_flush_dcache_all(void)
 
 void up_enable_dcache(void)
 {
+  /* Check if the D-Cache is enabled */
+
+  if (cp15_dcache_is_enabled())
+    {
+      return;
+    }
+
+  up_invalidate_dcache_all();
+
   cp15_enable_dcache();
   l2cc_enable();
 }

@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/sama5/sama5d3-xplained/src/sam_usb.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -302,6 +304,16 @@ int sam_usbhost_initialize(void)
     }
 #endif
 
+#ifdef CONFIG_USBHOST_BTHCI
+  /* Register USB Bluetooth support */
+
+  ret = usbhost_bthci_initialize();
+  if (ret != OK)
+    {
+      uerr("ERROR: Failed to register the bt controller: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_USBHOST_MSC
   /* Register theUSB host Mass Storage Class */
 
@@ -329,6 +341,16 @@ int sam_usbhost_initialize(void)
   if (ret != OK)
     {
       uerr("ERROR: Failed to register the KBD class\n");
+    }
+#endif
+
+#ifdef CONFIG_USBHOST_HIDMOUSE
+  /* Initialize the HID mouse class */
+
+  ret = usbhost_mouse_init();
+  if (ret != OK)
+    {
+      uerr("ERROR: Failed to register the HID mouse class\n");
     }
 #endif
 

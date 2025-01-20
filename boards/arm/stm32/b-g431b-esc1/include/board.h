@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/stm32/b-g431b-esc1/include/board.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.  The
@@ -122,7 +124,7 @@
 #define STM32_RCC_CFGR_PPRE2           RCC_CFGR_PPRE2_HCLK
 #define STM32_PCLK2_FREQUENCY          STM32_HCLK_FREQUENCY
 
-#endif  /* CONFIG_BOARD_STM32_BG431BESC1_USE_HSI */
+#endif /* CONFIG_BOARD_STM32_BG431BESC1_USE_HSI */
 
 #ifdef CONFIG_BOARD_STM32_BG431BESC1_USE_HSE
 
@@ -206,7 +208,7 @@
 #define STM32_RCC_CFGR_PPRE2           RCC_CFGR_PPRE2_HCLK
 #define STM32_PCLK2_FREQUENCY          STM32_HCLK_FREQUENCY
 
-#endif  /* CONFIG_BOARD_STM32_BG431BESC1_USE_HSE */
+#endif /* CONFIG_BOARD_STM32_BG431BESC1_USE_HSE */
 
 /* APB2 timers 1, 8, 20 and 15-17 will receive PCLK2. */
 

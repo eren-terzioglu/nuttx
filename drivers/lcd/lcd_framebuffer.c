@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/lcd/lcd_framebuffer.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -105,7 +107,7 @@ static int lcdfb_setcursor(FAR struct fb_vtable_s *vtable,
              FAR struct fb_setcursor_s *settings);
 #endif
 
-static int lcdfb_setpower(FAR struct fb_vtable_s *vtable, FAR int power);
+static int lcdfb_setpower(FAR struct fb_vtable_s *vtable, int power);
 
 /****************************************************************************
  * Private Data
@@ -467,7 +469,7 @@ static int lcdfb_setcursor(FAR struct fb_vtable_s *vtable,
  * Name: lcdfb_setpower
  ****************************************************************************/
 
-static int lcdfb_setpower(FAR struct fb_vtable_s *vtable, FAR int power)
+static int lcdfb_setpower(FAR struct fb_vtable_s *vtable, int power)
 {
   int ret = -EINVAL;
   FAR struct lcdfb_dev_s *priv;
@@ -518,6 +520,60 @@ static int lcdfb_ioctl(FAR struct fb_vtable_s *vtable,
       else
         {
           ret = -ENOTTY;
+        }
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: lcdfb_open
+ ****************************************************************************/
+
+static int lcdfb_open(FAR struct fb_vtable_s *vtable)
+{
+  int ret = OK;
+  FAR struct lcdfb_dev_s *priv;
+  FAR struct lcd_dev_s *lcd;
+
+  DEBUGASSERT(vtable != NULL);
+
+  priv = (FAR struct lcdfb_dev_s *)vtable;
+
+  if (priv != NULL)
+    {
+      lcd = priv->lcd;
+
+      if (lcd->open)
+        {
+          ret = lcd->open(lcd);
+        }
+    }
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: lcdfb_close
+ ****************************************************************************/
+
+static int lcdfb_close(FAR struct fb_vtable_s *vtable)
+{
+  int ret = OK;
+  FAR struct lcdfb_dev_s *priv;
+  FAR struct lcd_dev_s *lcd;
+
+  DEBUGASSERT(vtable != NULL);
+
+  priv = (FAR struct lcdfb_dev_s *)vtable;
+
+  if (priv != NULL)
+    {
+      lcd = priv->lcd;
+
+      if (lcd->close)
+        {
+          ret = lcd->close(lcd);
         }
     }
 
@@ -581,6 +637,8 @@ int up_fbinitialize(int display)
   priv->vtable.updatearea   = lcdfb_updateearea,
   priv->vtable.setpower     = lcdfb_setpower,
   priv->vtable.ioctl        = lcdfb_ioctl,
+  priv->vtable.open         = lcdfb_open,
+  priv->vtable.close        = lcdfb_close,
 
 #ifdef CONFIG_LCD_EXTERNINIT
   /* Use external graphics driver initialization */

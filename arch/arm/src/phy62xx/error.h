@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/phy62xx/error.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -19,14 +21,11 @@
  ****************************************************************************/
 
 /****************************************************************************
- *    @file     error.h
- *    @brief    Global error definition
- *    @version  0.0
- *    @date     11. Feb. 2018
- *    @author   Eagle.Lao
- *
- *
- *
+ * error.h
+ * Global error definition
+ * 0.0
+ * 11. Feb. 2018
+ * Eagle.Lao
  ****************************************************************************/
 
 /****************************************************************************

@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/wireless/lte/lte.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -679,7 +681,7 @@ typedef struct lte_getpin
   uint8_t enable;
 
   /* PIN status. Refer to the this parameter only
-   * when enable is @ref LTE_ENABLE.
+   * when enable is LTE_ENABLE.
    */
 
   uint8_t status;
@@ -1144,7 +1146,7 @@ typedef struct lte_pdn
 
   uint8_t      ipaddr_num;
 
-  /* IP address information. See @ref lte_ipaddr_t */
+  /* IP address information. See lte_ipaddr_t */
 
   lte_ipaddr_t address[LTE_PDN_IPADDR_MAX_COUNT];
 
@@ -1464,7 +1466,7 @@ struct ltefw_injectdata_s
  * - LTE_RESULT_ERROR
  *
  * [in] version : The version information of the modem.
- *                See @ref lte_version_t
+ *                See lte_version_t
  */
 
 typedef void (*get_ver_cb_t)(uint32_t result, lte_version_t *version);

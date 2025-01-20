@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/src/common/arm64_internal.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,6 +34,7 @@
 #  include <nuttx/arch.h>
 #  include <sys/types.h>
 #  include <stdint.h>
+#  include <syscall.h>
 #endif
 
 #include "arm64_arch.h"
@@ -83,13 +86,6 @@
 #  define CONFIG_ARCH_INTERRUPTSTACK 0
 #endif
 
-/* If the floating point unit is present and enabled, then save the
- * floating point registers as well as normal ARM registers.
- */
-
-#define arm64_savestate(regs) (regs = (uint64_t *)CURRENT_REGS)
-#define arm64_restorestate(regs) (CURRENT_REGS = regs)
-
 /* This is the value used to mark the stack for subsequent stack monitoring
  * logic.
  */
@@ -115,6 +111,15 @@
 #  define SMP_STACK_SIZE    STACK_ALIGN_UP(CONFIG_IDLETHREAD_STACKSIZE)
 #  define SMP_STACK_WORDS   (SMP_STACK_SIZE >> 2)
 #endif
+
+/* Context switching */
+
+#define arm64_fullcontextrestore() \
+  do \
+    { \
+      sys_call0(SYS_restore_context); \
+    } \
+  while (1)
 
 /****************************************************************************
  * Public Types
@@ -152,7 +157,7 @@ extern "C"
     EXTERN char sym[n][size]
 
 #define STACK_PTR_TO_FRAME(type, ptr) \
-    (type *)((uintptr_t)(ptr) - sizeof(type))
+    (type *)STACK_ALIGN_DOWN((uintptr_t)(ptr) - sizeof(type))
 
 #define INTSTACK_SIZE        (CONFIG_ARCH_INTERRUPTSTACK & ~STACK_ALIGN_MASK)
 
@@ -167,9 +172,6 @@ INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_stacks, CONFIG_SMP_NCPUS,
 INIT_STACK_ARRAY_DEFINE_EXTERN(g_interrupt_fiq_stacks, CONFIG_SMP_NCPUS,
                           INTSTACK_SIZE);
 #endif
-
-uintptr_t arm64_intstack_alloc(void);
-uintptr_t arm64_intstack_top(void);
 #else
 /* idle thread stack for primary core */
 
@@ -260,6 +262,8 @@ EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
  ****************************************************************************/
 
 void arm64_new_task(struct tcb_s *tak_new);
+void arm64_jump_to_user(uint64_t entry, uint64_t x0, uint64_t x1,
+                        uint64_t sp_el0, uint64_t *regs) noreturn_function;
 
 /* Low level initialization provided by chip logic */
 
@@ -269,11 +273,6 @@ int arm64_psci_init(const char *method);
 
 void __start(void);
 void arm64_secondary_start(void);
-
-/* Context switching */
-
-void arm64_fullcontextrestore(uint64_t *restoreregs) noreturn_function;
-void arm64_switchcontext(uint64_t **saveregs, uint64_t *restoreregs);
 
 /* Signal handling **********************************************************/
 
@@ -299,14 +298,17 @@ uint64_t *arm64_doirq(int irq, uint64_t *regs);
 
 /* Paging support */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm64_pginitialize(void);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm64_pginitialize()
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
-uint64_t * arm64_syscall_switch(uint64_t *regs);
-int arm64_syscall(uint64_t *regs);
+uint64_t *arm64_syscall(uint64_t *regs);
+
+/* Low level serial output **************************************************/
+
+void arm64_lowputc(char ch);
 
 #ifdef USE_SERIALDRIVER
 /****************************************************************************

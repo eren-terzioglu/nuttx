@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/video/mipi_dsi.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -50,7 +52,7 @@
 
 #define MIPI_DSI_MSG_REQ_ACK      (1 << 0)   /* Request ACK from peripheral */
 #define MIPI_DSI_MSG_USE_LPM      (1 << 1)   /* Use Low Power Mode to
-                                                * transmit message */
+                                              * transmit message */
 #define MIPI_DSI_MSG_AFTER_FRAME  (1 << 2)   /* Transmit message after frame */
 
 /* Tearing Effect Output Line mode */

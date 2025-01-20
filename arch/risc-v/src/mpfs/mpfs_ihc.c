@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_ihc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@
 #include <sys/types.h>
 #include <time.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
@@ -41,7 +44,6 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/wqueue.h>
 
-#include <nuttx/rptun/openamp.h>
 #include <nuttx/rptun/rptun.h>
 #include <nuttx/drivers/addrenv.h>
 #include <nuttx/list.h>
@@ -80,7 +82,6 @@
 /* rptun initialization names */
 
 #define MPFS_RPTUN_CPU_NAME      "mpfs-ihc"
-#define MPFS_RPTUN_SHMEM_NAME    "mpfs-shmem"
 
 /* Vring configuration parameters */
 
@@ -114,8 +115,6 @@
 struct mpfs_rptun_shmem_s
 {
   volatile uintptr_t         base;
-  volatile unsigned int      seqs;
-  volatile unsigned int      seqm;
   struct rptun_rsc_s         rsc;
   bool                       master_up;
 };
@@ -127,11 +126,9 @@ struct mpfs_rptun_dev_s
   rptun_callback_t           callback;
   void                      *arg;
   bool                       master;
-  unsigned int               seq;
   struct mpfs_rptun_shmem_s *shmem;
   struct simple_addrenv_s    addrenv[VRINGS];
   char                       cpuname[RPMSG_NAME_SIZE + 1];
-  char                       shmemname[RPMSG_NAME_SIZE + 1];
 };
 
 struct mpfs_queue_table_s
@@ -150,9 +147,6 @@ struct mpfs_ihc_work_arg_s
  ****************************************************************************/
 
 static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev);
-static const char *mpfs_rptun_get_firmware(struct rptun_dev_s *dev);
-static const struct rptun_addrenv_s
-*mpfs_rptun_get_addrenv(struct rptun_dev_s *dev);
 static struct rptun_rsc_s *mpfs_rptun_get_resource(struct rptun_dev_s *dev);
 static bool mpfs_rptun_is_autostart(struct rptun_dev_s *dev);
 static bool mpfs_rptun_is_master(struct rptun_dev_s *dev);
@@ -226,8 +220,6 @@ const uint32_t ihcia_remote_hart_ints[MPFS_NUM_HARTS] =
 static const struct rptun_ops_s g_mpfs_rptun_ops =
 {
   .get_cpuname       = mpfs_rptun_get_cpuname,
-  .get_firmware      = mpfs_rptun_get_firmware,
-  .get_addrenv       = mpfs_rptun_get_addrenv,
   .get_resource      = mpfs_rptun_get_resource,
   .is_autostart      = mpfs_rptun_is_autostart,
   .is_master         = mpfs_rptun_is_master,
@@ -384,7 +376,7 @@ static uint32_t mpfs_ihc_context_to_local_hart_id(ihc_channel_t channel)
   uint32_t hart             = UNDEFINED_HART_ID;
   uint32_t hart_idx         = 0;
   uint32_t harts_in_context = LIBERO_SETTING_CONTEXT_B_HART_EN;
-  uint64_t mhartid          = riscv_mhartid();
+  uint64_t mhartid          = up_cpu_index();
 
   /* If we are sending to a Context, assume we are a Context.
    * i.e. HSS bootloader will not send directly to a context.
@@ -597,7 +589,7 @@ static void mpfs_ihc_rx_message(ihc_channel_t channel, uint32_t mhartid,
 
 static void mpfs_ihc_message_present_isr(void)
 {
-  uint64_t mhartid = riscv_mhartid();
+  uint64_t mhartid = up_cpu_index();
   bool is_ack = false;
   bool is_msg = false;
 
@@ -840,45 +832,6 @@ static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: mpfs_rptun_get_firmware
- *
- * Description:
- *   Gets the mpfs rptun firmware.
- *
- * Input Parameters:
- *   dev   - Rptun device.
- *
- * Returned Value:
- *   Always null, no associated firmware present
- *
- ****************************************************************************/
-
-static const char *mpfs_rptun_get_firmware(struct rptun_dev_s *dev)
-{
-  return NULL;
-}
-
-/****************************************************************************
- * Name: mpfs_rptun_get_addrenv
- *
- * Description:
- *   Gets the mpfs rptun addrenv.
- *
- * Input Parameters:
- *   dev   - Rptun device.
- *
- * Returned Value:
- *   Always null, no associated addrenv present.
- *
- ****************************************************************************/
-
-static const struct rptun_addrenv_s *
-mpfs_rptun_get_addrenv(struct rptun_dev_s *dev)
-{
-  return NULL;
-}
-
-/****************************************************************************
  * Name: mpfs_rptun_get_resource
  *
  * Description:
@@ -914,8 +867,6 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       rsc = &priv->shmem->rsc;
 
       g_shmem.base = VRING_SHMEM;
-      g_shmem.seqm = 0;
-      g_shmem.seqs = 0;
 
       rsc->rsc_tbl_hdr.ver          = 1;
       rsc->rsc_tbl_hdr.num          = 1;
@@ -1129,7 +1080,6 @@ static int mpfs_rptun_register_callback(struct rptun_dev_s *dev,
  *   Initializes the rptun device.
  *
  * Input Parameters:
- *   shmemname  - Shared mempory name
  *   cpuname    - Local CPU name
  *
  * Returned Value:
@@ -1137,7 +1087,7 @@ static int mpfs_rptun_register_callback(struct rptun_dev_s *dev,
  *
  ****************************************************************************/
 
-static int mpfs_rptun_init(const char *shmemname, const char *cpuname)
+static int mpfs_rptun_init(const char *cpuname)
 {
   struct mpfs_rptun_dev_s *dev;
   int ret;
@@ -1156,7 +1106,6 @@ static int mpfs_rptun_init(const char *shmemname, const char *cpuname)
 
   dev->rptun.ops = &g_mpfs_rptun_ops;
   strlcpy(dev->cpuname, cpuname, sizeof(dev->cpuname));
-  strlcpy(dev->shmemname, shmemname, sizeof(dev->shmemname));
   list_add_tail(&g_dev_list, &dev->node);
 
   ret = rptun_initialize(&dev->rptun);
@@ -1359,7 +1308,7 @@ static int mpfs_rptun_thread(int argc, char *argv[])
 
 int mpfs_ihc_init(void)
 {
-  uint32_t  mhartid = (uint32_t)riscv_mhartid();
+  uint32_t  mhartid = (uint32_t)up_cpu_index();
 #ifdef MPFS_RPTUN_USE_THREAD
   char     *argv[3];
   char      arg1[19];
@@ -1421,7 +1370,7 @@ int mpfs_ihc_init(void)
       g_shmem.rsc.rpmsg_vdev.status |= VIRTIO_CONFIG_STATUS_DRIVER_OK;
     }
 
-  ret = mpfs_rptun_init(MPFS_RPTUN_SHMEM_NAME, MPFS_RPTUN_CPU_NAME);
+  ret = mpfs_rptun_init(MPFS_RPTUN_CPU_NAME);
   if (ret < 0)
     {
       ihcerr("ERROR: Not able to init RPTUN\n");
@@ -1466,44 +1415,4 @@ int mpfs_ihc_init(void)
 init_error:
   up_disable_irq(g_plic_irq);
   return ret;
-}
-
-/****************************************************************************
- * Name: up_addrenv_va_to_pa
- *
- * Description:
- *   This is needed by openamp/libmetal/lib/system/nuttx/io.c:78. The
- *   physical memory is mapped as virtual.
- *
- * Input Parameters:
- *   va_
- *
- * Returned Value:
- *   va
- *
- ****************************************************************************/
-
-uintptr_t up_addrenv_va_to_pa(void *va)
-{
-  return (uintptr_t)va;
-}
-
-/****************************************************************************
- * Name: up_addrenv_pa_to_va
- *
- * Description:
- *   This is needed by openamp/libmetal/lib/system/nuttx/io.c. The
- *   physical memory is mapped as virtual.
- *
- * Input Parameters:
- *   pa
- *
- * Returned Value:
- *   pa
- *
- ****************************************************************************/
-
-void *up_addrenv_pa_to_va(uintptr_t pa)
-{
-  return (void *)pa;
 }

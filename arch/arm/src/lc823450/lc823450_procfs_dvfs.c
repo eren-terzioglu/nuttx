@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/lc823450/lc823450_procfs_dvfs.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -91,6 +93,7 @@ static const struct procfs_operations dvfs_procfsoperations =
   dvfs_close,     /* close */
   dvfs_read,      /* read */
   dvfs_write,     /* write */
+  NULL,           /* poll */
   dvfs_dup,       /* dup */
   NULL,           /* opendir */
   NULL,           /* closedir */

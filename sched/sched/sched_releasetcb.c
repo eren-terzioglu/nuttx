@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/sched/sched_releasetcb.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 
+#include "task/task.h"
 #include "sched/sched.h"
 #include "group/group.h"
 #include "timer/timer.h"
@@ -97,10 +100,17 @@ static void nxsched_releasepid(pid_t pid)
 
 int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 {
+#ifndef CONFIG_DISABLE_PTHREAD
+  FAR struct task_tcb_s *ttcb;
+#endif
   int ret = OK;
 
   if (tcb)
     {
+      /* Released tcb shouldn't on any list */
+
+      DEBUGASSERT(tcb->flink == NULL && tcb->blink == NULL);
+
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
       /* Release any timers that the task might hold.  We do this
        * before release the PID because it may still be trying to
@@ -161,9 +171,37 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype)
 
       group_leave(tcb);
 
+#ifndef CONFIG_DISABLE_PTHREAD
+      /* Destroy the pthread join mutex */
+
+      nxtask_joindestroy(tcb);
+
+      /* Task still referenced by pthread */
+
+      if (ttype == TCB_FLAG_TTYPE_TASK)
+        {
+          ttcb = (FAR struct task_tcb_s *)tcb;
+          if (!sq_empty(&ttcb->group.tg_members)
+#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
+              || ttcb->group.tg_nwaiters > 0
+#endif
+              )
+            {
+              /* Mark the group as deleted now */
+
+              ttcb->group.tg_flags |= GROUP_FLAG_DELETED;
+
+              return ret;
+            }
+        }
+#endif
+
       /* And, finally, release the TCB itself */
 
-      kmm_free(tcb);
+      if (tcb->flags & TCB_FLAG_FREE_TCB)
+        {
+          kmm_free(tcb);
+        }
     }
 
   return ret;

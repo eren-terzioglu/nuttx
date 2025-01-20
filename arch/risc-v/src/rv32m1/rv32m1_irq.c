@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/rv32m1/rv32m1_irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -237,11 +239,11 @@ irqstate_t up_irq_enable(void)
 
   /* TODO: should move to up_enable_irq() */
 
-  SET_CSR(mie, MIE_MEIE);
+  SET_CSR(CSR_MIE, MIE_MEIE);
 #endif
 
   /* Read mstatus & set machine interrupt enable (MIE) in mstatus */
 
-  oldstat = READ_AND_SET_CSR(mstatus, MSTATUS_MIE);
+  oldstat = READ_AND_SET_CSR(CSR_MSTATUS, MSTATUS_MIE);
   return oldstat;
 }

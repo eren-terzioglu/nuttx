@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/at32/at32f43xx_flash.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -102,7 +104,7 @@ static void flash_unlock(void)
           putreg32(FLASH_KEY2, AT32_FLASH_UNLOCK2);
         }
     }
-#endif  
+#endif
 }
 
 static void flash_lock(void)
@@ -112,7 +114,7 @@ static void flash_lock(void)
 #ifdef AT32_FLASH_BANK2_START
   if (AT32_FLASH_BANK2_START < AT32_FLASH_NPAGES)
     modifyreg32(AT32_FLASH_CTRL2, 0, FLASH_CTRL_OPLK);
-#endif    
+#endif
 }
 
 #if defined(CONFIG_AT32_FLASH_WORKAROUND_DATA_CACHE_CORRUPTION_ON_RWW)

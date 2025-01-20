@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/sim/sim/sim/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -64,7 +66,7 @@ target_sources(board PRIVATE ${SRCS})
 
 set_property(GLOBAL PROPERTY LD_SCRIPT "${NUTTX_BOARD_DIR}/scripts/gnu-elf.ld")
 
-if(CONFIG_NSH_ROMFSETC AND CONFIG_NSH_ARCHROMFS)
+if(CONFIG_ETC_ROMFS)
   nuttx_add_romfs(
     NAME
     etc

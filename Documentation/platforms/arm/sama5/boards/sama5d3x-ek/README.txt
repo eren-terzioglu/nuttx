@@ -502,13 +502,13 @@ Boot sequence
 DRAMBOOT
 --------
 
-  See also boards/arm/sama5/sama5d4-ek/README.txt for a description of the DRAMBOOT
+  See also Documentation/platforms/arm/sama5/boards/sama5d4-ek/README.txt for a description of the DRAMBOOT
   program.  This is a tiny version of NuttX that can run out of internal
   SRAM.  If you put this program on the HSMCI1 microSD card as boot.bin, then
   it will boot on power up and you can download NuttX directly into DRAM by
   sending the nuttx.hex file over the serial connection.
 
-  The boards/arm/sama5/sama5d4-ek/README.txt also describes variants AT25BOOT and
+  The Documentation/platforms/arm/sama5/boards/sama5d4-ek/README.txt also describes variants AT25BOOT and
   SRAMBOOT.  This have not been ported to the SAMA5D3x-EK, but are available
   if they are useful too you.
 
@@ -1700,7 +1700,7 @@ USB High-Speed Host
       CONFIG_USBMONITOR_PRIORITY=50    : USB monitor daemon priority
       CONFIG_USBMONITOR_INTERVAL=1     : Dump trace data every second
 
-  NOTE: If USB debug output is also enabled, both outpus will appear on the
+  NOTE: If USB debug output is also enabled, both outputs will appear on the
   serial console.  However, the debug output will be asynchronous with the
   trace output and, hence, difficult to interpret.
 

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32h7/stm32_rcc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -120,7 +122,7 @@ void stm32_clockconfig(void)
   stm32_stdclockconfig();
 
 #  endif
-#endif  /* !CONFIG_STM32H7_BYPASS_CLOCKCONFIG */
+#endif /* !CONFIG_STM32H7_BYPASS_CLOCKCONFIG */
 
   /* Enable peripheral clocking */
 

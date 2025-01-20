@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/wireless/ieee802154/mrf24j40/mrf24j40_radif.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -551,6 +553,12 @@ int mrf24j40_getattr(FAR struct ieee802154_radio_s *radio,
         {
           attrval->phy.fcslen = 2;
           ret = IEEE802154_STATUS_SUCCESS;
+        }
+        break;
+
+      case IEEE802154_ATTR_PHY_REGDUMP:
+        {
+          ret = mrf24j40_regdump(dev);
         }
         break;
 

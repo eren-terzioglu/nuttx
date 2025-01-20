@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32f0l0g0/stm32_serial_v2.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -37,6 +39,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
@@ -155,6 +158,7 @@ struct up_dev_s
   const uint32_t    rs485_dir_gpio;     /* U[S]ART RS-485 DIR GPIO pin configuration */
   const bool        rs485_dir_polarity; /* U[S]ART RS-485 DIR pin state for TX enabled */
 #endif
+  spinlock_t        lock;
 };
 
 /****************************************************************************
@@ -282,6 +286,7 @@ static struct up_dev_s g_usart1priv =
   .rs485_dir_polarity = true,
 #  endif
 #endif
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -336,6 +341,7 @@ static struct up_dev_s g_usart2priv =
   .rs485_dir_polarity = true,
 #  endif
 #endif
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -390,6 +396,7 @@ static struct up_dev_s g_usart3priv =
   .rs485_dir_polarity = true,
 #  endif
 #endif
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -444,6 +451,7 @@ static struct up_dev_s g_usart4priv =
   .rs485_dir_polarity = true,
 #  endif
 #endif
+  .lock               = SP_UNLOCKED,
 };
 #endif
 
@@ -531,11 +539,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint16_t ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   up_setusartint(priv, ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -546,7 +554,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   if (ie)
     {
@@ -590,7 +598,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 
   up_setusartint(priv, 0);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -2006,28 +2014,17 @@ void arm_serialinit(void)
  *
  ****************************************************************************/
 
-int up_putc(int ch)
+void up_putc(int ch)
 {
 #if CONSOLE_USART > 0
   struct up_dev_s *priv = g_uart_devs[CONSOLE_USART - 1];
   uint16_t ie;
 
   up_disableusartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
   up_restoreusartint(priv, ie);
 
 #endif
-  return ch;
 }
 
 #else /* USE_SERIALDRIVER */
@@ -2040,21 +2037,11 @@ int up_putc(int ch)
  *
  ****************************************************************************/
 
-int up_putc(int ch)
+void up_putc(int ch)
 {
 #if CONSOLE_USART > 0
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
-  return ch;
 }
 
 #endif /* USE_SERIALDRIVER */

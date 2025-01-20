@@ -1,6 +1,8 @@
 # ##############################################################################
 # drivers/serial/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -22,8 +24,12 @@
 
 set(SRCS serial.c serial_io.c)
 
-if(CONFIG_UART_PL011)
-  list(APPEND SRCS serial_pl011.c)
+if(CONFIG_SERIAL_GDBSTUB)
+  list(APPEND SRCS serial_gdbstub.c)
+endif()
+
+if(CONFIG_CMSDK_UART)
+  list(APPEND SRCS serial_cmsdk.c)
 endif()
 
 if(CONFIG_SERIAL_RXDMA)
@@ -36,8 +42,16 @@ if(CONFIG_16550_UART)
   list(APPEND SRCS uart_16550.c)
 endif()
 
+if(CONFIG_UART_PL011)
+  list(APPEND SRCS uart_pl011.c)
+endif()
+
 if(CONFIG_RPMSG_UART)
   list(APPEND SRCS uart_rpmsg.c)
+endif()
+
+if(CONFIG_UART_HOSTFS)
+  list(APPEND SRCS uart_hostfs.c)
 endif()
 
 # Pseudo-terminal support
@@ -53,6 +67,24 @@ endif()
 
 if(CONFIG_UART_BTH4)
   list(APPEND SRCS uart_bth4.c)
+endif()
+
+# UART PCI drivers
+
+if(CONFIG_16550_PCI_UART)
+  list(APPEND SRCS uart_pci_16550.c)
+endif()
+
+# Bluetooth H:5 UART driver
+
+if(CONFIG_UART_BTH5)
+  list(APPEND SRCS uart_bth5.c)
+endif()
+
+# RAM uart support
+
+if(CONFIG_RAM_UART)
+  list(APPEND SRCS uart_ram.c)
 endif()
 
 target_sources(drivers PRIVATE ${SRCS})

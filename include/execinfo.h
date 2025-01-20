@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/execinfo.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,15 +29,24 @@
 
 #include <nuttx/sched.h>
 
+#include <assert.h>
+#include <stdio.h>
 #include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(), \
-                                                buffer, size, 0)
-#define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+/* 3: ' 0x' prefix */
+
+#define BACKTRACE_PTR_FMT_WIDTH  ((int)sizeof(uintptr_t) * 2 + 3)
+
+/* Buffer size needed to hold formatted `depth` backtraces */
+
+#define BACKTRACE_BUFFER_SIZE(d) (BACKTRACE_PTR_FMT_WIDTH * (d) + 1)
+
+#define backtrace(b, s) sched_backtrace(_SCHED_GETTID(), b, s, 0)
+#define dump_stack()    sched_dumpstack(_SCHED_GETTID())
 
 /****************************************************************************
  * Public Function Prototypes
@@ -52,6 +63,20 @@ extern "C"
 
 FAR char **backtrace_symbols(FAR void *const *buffer, int size);
 void backtrace_symbols_fd(FAR void *const *buffer, int size, int fd);
+int backtrace_format(FAR char *buffer, int size,
+                     FAR void *backtrace[], int depth);
+
+#  if CONFIG_LIBC_BACKTRACE_BUFFSIZE > 0
+int backtrace_record(int skip);
+int backtrace_remove(int index);
+FAR void **backtrace_get(int index, FAR int *size);
+void backtrace_dump(void);
+#  else
+#    define backtrace_record(skip) (-ENOSYS)
+#    define backtrace_remove(index) (-ENOSYS)
+#    define backtrace_get(index, size) (*(size)=0)
+#    define backtrace_dump()
+#  endif
 
 #undef EXTERN
 #if defined(__cplusplus)

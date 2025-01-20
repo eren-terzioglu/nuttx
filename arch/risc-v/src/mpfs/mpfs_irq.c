@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,8 @@
 #include <nuttx/irq.h>
 
 #include "riscv_internal.h"
+#include "riscv_ipi.h"
+
 #include "mpfs.h"
 #include "mpfs_plic.h"
 
@@ -50,22 +54,9 @@ void up_irqinitialize(void)
 
   up_irq_save();
 
-  /* Disable all global interrupts for current hart */
+  /* Initialize PLIC for current hart */
 
-  uintptr_t iebase = mpfs_plic_get_iebase();
-
-  putreg32(0x0, iebase + 0);
-  putreg32(0x0, iebase + 4);
-  putreg32(0x0, iebase + 8);
-  putreg32(0x0, iebase + 12);
-  putreg32(0x0, iebase + 16);
-  putreg32(0x0, iebase + 20);
-
-  /* Clear pendings in PLIC (for current hart) */
-
-  uintptr_t claim_address = mpfs_plic_get_claimbase();
-  uint32_t val = getreg32(claim_address);
-  putreg32(val, claim_address);
+  mpfs_plic_init_hart(up_cpu_index());
 
   /* Colorize the interrupt stack for debug purposes */
 
@@ -76,21 +67,22 @@ void up_irqinitialize(void)
 
   /* Set priority for all global interrupts to 1 (lowest) */
 
-  int id;
-
-  for (id = 1; id <= NR_IRQS; id++)
+  for (int id = 1; id <= NR_IRQS; id++)
     {
-      putreg32(1, (uintptr_t)(MPFS_PLIC_PRIORITY + (4 * id)));
+      putreg32(1, MPFS_PLIC_PRIORITY + (4 * id));
     }
-
-  /* Set irq threshold to 0 (permits all global interrupts) */
-
-  uintptr_t threshold_address = mpfs_plic_get_thresholdbase();
-  putreg32(0, threshold_address);
 
   /* Attach the common interrupt handler */
 
   riscv_exception_attach();
+
+#ifdef CONFIG_SMP
+  /* Clear IPI for CPU0 */
+
+  riscv_ipi_clear(0);
+
+  up_enable_irq(RISCV_IRQ_SOFT);
+#endif
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
 

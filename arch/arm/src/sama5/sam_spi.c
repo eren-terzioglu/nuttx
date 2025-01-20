@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/sama5/sam_spi.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -302,7 +304,7 @@ static const struct spi_ops_s g_spi0ops =
   .setfrequency      = spi_setfrequency,
 #ifdef CONFIG_SPI_DELAY_CONTROL
   .setdelay          = spi_setdelay,
-#endif  
+#endif
   .setmode           = spi_setmode,
   .setbits           = spi_setbits,
 #ifdef CONFIG_SPI_HWFEATURES
@@ -507,7 +509,7 @@ static void spi_dumpregs(struct sam_spidev_s *spi, const char *msg)
           getreg32(spi->base + SAM_SPI_MR_OFFSET),
           getreg32(spi->base + SAM_SPI_SR_OFFSET),
           getreg32(spi->base + SAM_SPI_IMR_OFFSET));
-  spiinfo("  CSR0:%" PRIx32 " CSR1:%" PRIx32 " CSR2:%" PRIx32 " CSR3:%" \
+  spiinfo("  CSR0:%" PRIx32 " CSR1:%" PRIx32 " CSR2:%" PRIx32 " CSR3:%"
           PRIx32 "\n",
           getreg32(spi->base + SAM_SPI_CSR0_OFFSET),
           getreg32(spi->base + SAM_SPI_CSR1_OFFSET),
@@ -1556,7 +1558,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 
   rxflags = DMACH_FLAG_FIFOCFG_LARGEST | DMACH_FLAG_PERIPHPID(spi->pid) |
             DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |
-#ifdef ATSAMA5D2            
+#ifdef ATSAMA5D2
             DMACH_FLAG_PERIPHAHB_AHB_IF1 | DMACH_FLAG_PERIPHWIDTH_8BITS |
 #else
             DMACH_FLAG_PERIPHAHB_AHB_IF2 | DMACH_FLAG_PERIPHWIDTH_8BITS |
@@ -1582,7 +1584,7 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
 
   txflags = DMACH_FLAG_FIFOCFG_LARGEST | DMACH_FLAG_PERIPHPID(spi->pid) |
             DMACH_FLAG_PERIPHH2SEL | DMACH_FLAG_PERIPHISPERIPH |
-#ifdef ATSAMA5D2            
+#ifdef ATSAMA5D2
             DMACH_FLAG_PERIPHAHB_AHB_IF1 | DMACH_FLAG_PERIPHWIDTH_8BITS |
 #else
             DMACH_FLAG_PERIPHAHB_AHB_IF2 | DMACH_FLAG_PERIPHWIDTH_8BITS |

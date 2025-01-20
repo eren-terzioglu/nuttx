@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/assert.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@
  ****************************************************************************/
 
 #include <nuttx/compiler.h>
+#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -77,20 +80,10 @@
                                            __ASSERT_LINE__, msg, regs)
 
 #define __ASSERT__(f, file, line, _f) \
-  do                                  \
-    {                                 \
-      if (predict_false(!(f)))        \
-        __assert(file, line, _f);     \
-    }                                 \
-  while (0)
+  (predict_false(!(f))) ? __assert(file, line, _f) : ((void)0)
 
 #define __VERIFY__(f, file, line, _f) \
-  do                                  \
-    {                                 \
-      if (predict_false((f) < 0))     \
-        __assert(file, line, _f);     \
-    }                                 \
-  while (0)
+  (predict_false((f) < 0)) ? __assert(file, line, _f) : ((void)0)
 
 #ifdef CONFIG_DEBUG_ASSERTIONS_EXPRESSION
 #  define _ASSERT(f,file,line) __ASSERT__(f, file, line, #f)
@@ -113,17 +106,26 @@
 /* The C standard states that if NDEBUG is defined, assert will do nothing.
  * Users can define and undefine NDEBUG as they see fit to choose when assert
  * does something or does not do anything.
+ *
+ * #define assert(ignore) ((void)0)
+ *
+ * Reference link:
+ * https://pubs.opengroup.org/onlinepubs/009695399/basedefs/assert.h.html
  */
 
 #ifdef NDEBUG
-#  define assert(f) ((void)(1 || (f)))
-#  define VERIFY(f) assert(f)
+#  define assert(f) ((void)0)
 #else
 #  define assert(f) _ASSERT(f, __ASSERT_FILE__, __ASSERT_LINE__)
-#  define VERIFY(f) _VERIFY(f, __ASSERT_FILE__, __ASSERT_LINE__)
 #endif
 
-#define ASSERT(f) assert(f)
+/* ASSERT/VERIFY are NuttX-specific APIs.
+ * They are always enabled, regardless of NDEBUG/CONFIG_DEBUG_ASSERTIONS.
+ * The argument is evaluated exactly once.
+ */
+
+#define ASSERT(f) _ASSERT(f, __ASSERT_FILE__, __ASSERT_LINE__)
+#define VERIFY(f) _VERIFY(f, __ASSERT_FILE__, __ASSERT_LINE__)
 
 /* Suppress 3rd party library redefine _assert/__assert */
 
@@ -139,9 +141,13 @@
 #    define static_assert _Static_assert
 #  else
 #    define static_assert(cond, msg) \
-       extern int (*__static_assert_function (void)) \
+       extern int (*__static_assert_function(void)) \
        [!!sizeof (struct { int __error_if_negative: (cond) ? 2 : -1; })]
 #  endif
+#endif
+
+#ifndef COMPILE_TIME_ASSERT
+#  define COMPILE_TIME_ASSERT(x) static_assert(x, "compile time assert failed")
 #endif
 
 /* Force a compilation error if condition is true, but also produce a

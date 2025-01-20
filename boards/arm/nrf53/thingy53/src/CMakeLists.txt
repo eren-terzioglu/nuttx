@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/nrf53/thingy53/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -18,7 +20,7 @@
 #
 # ##############################################################################
 
-set(SRCS nrf53_boot.c nrf53_bringup.c)
+set(SRCS nrf53_boot.c nrf53_bringup.c nrf53_sensors.c)
 
 if(CONFIG_BOARDCTL)
   list(APPEND SRCS nrf53_appinit.c)
@@ -30,6 +32,14 @@ endif()
 
 if(CONFIG_ARCH_BUTTONS)
   list(APPEND SRCS nrf53_buttons.c)
+endif()
+
+if(CONFIG_NRF53_SPI_MASTER)
+  list(APPEND SRCS nrf53_spi.c)
+endif()
+
+if(CONFIG_I2C)
+  list(APPEND SRCS nrf53_i2c.c)
 endif()
 
 if(CONFIG_USBDEV)

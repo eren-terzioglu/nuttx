@@ -1,6 +1,8 @@
 # ##############################################################################
 # drivers/rptun/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -20,10 +22,14 @@
 if(CONFIG_RPTUN)
   set(SRCS)
 
-  list(APPEND SRCS rptun.c rptun_dump.c)
+  list(APPEND SRCS rptun.c)
 
-  if(CONFIG_RPTUN_PING)
-    list(APPEND SRCS rptun_ping.c)
+  if(CONFIG_RPTUN_BMP)
+    list(APPEND SRCS rptun_bmp.c)
+  endif()
+
+  if(CONFIG_RPTUN_IVSHMEM)
+    list(APPEND SRCS rptun_ivshmem.c)
   endif()
 
   target_include_directories(drivers PRIVATE ${NUTTX_DIR}/openamp/open-amp/lib)

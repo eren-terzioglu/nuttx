@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/iob/iob_reserve.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,9 +51,9 @@ void iob_reserve(FAR struct iob_s *iob, unsigned int reserved)
 
   while (iob != NULL && reserved > 0)
     {
-      if (reserved > CONFIG_IOB_BUFSIZE)
+      if (reserved > IOB_BUFSIZE(iob))
         {
-          offset = CONFIG_IOB_BUFSIZE;
+          offset = IOB_BUFSIZE(iob);
         }
       else
         {

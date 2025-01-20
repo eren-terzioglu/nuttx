@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv8-m/gnu/arch_memmove.S
  *
- * Copyright (c) 2015 ARM Ltd
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2015 ARM Ltd
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,26 @@
 
 #ifdef LIBC_BUILD_MEMMOVE
 
+#ifndef __ARM_FEATURE_BTI_DEFAULT
+#  define __ARM_FEATURE_BTI_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_PAC_DEFAULT
+#  define __ARM_FEATURE_PAC_DEFAULT 0
+#endif
+
 	.thumb
 	.syntax unified
-	.global memmove
-	.type	memmove, %function
-memmove:
+	.global ARCH_LIBCFUN(memmove)
+	.type	ARCH_LIBCFUN(memmove), %function
+ARCH_LIBCFUN(memmove):
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	cmp	r0, r1
 	push	{r4}
 	bls	3f
@@ -54,6 +69,9 @@ memmove:
 	bne	1b
 2:
 	pop	{r4}
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 3:
 	cmp	r2, #0
@@ -66,7 +84,10 @@ memmove:
 	strb	r4, [r3, #1]!
 	bne	4b
 	pop	{r4}
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
-	.size memmove, . - memmove
+	.size ARCH_LIBCFUN(memmove), . - ARCH_LIBCFUN(memmove)
 
 #endif

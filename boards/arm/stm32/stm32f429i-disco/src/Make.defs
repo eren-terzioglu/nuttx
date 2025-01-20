@@ -1,6 +1,8 @@
 ############################################################################
 # boards/arm/stm32/stm32f429i-disco/src/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -69,6 +71,10 @@ endif
 
 ifeq ($(CONFIG_ADC),y)
 CSRCS += stm32_adc.c
+endif
+
+ifeq ($(CONFIG_STM32_CAN_CHARDRIVER),y)
+CSRCS += stm32_can.c
 endif
 
 ifeq ($(CONFIG_STM32F429I_DISCO_HIGHPRI),y)

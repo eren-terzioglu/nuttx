@@ -1,6 +1,8 @@
 /****************************************************************************
  * fs/vfs/fs_dup2.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -58,7 +60,6 @@
 int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
 {
   FAR struct inode *inode;
-  struct file temp;
   int ret;
 
   if (filep1 == NULL || filep1->f_inode == NULL || filep2 == NULL)
@@ -79,29 +80,34 @@ int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
   /* Increment the reference count on the contained inode */
 
   inode = filep1->f_inode;
-  ret   = inode_addref(inode);
+  inode_addref(inode);
+
+  /* If there is already an inode contained in the new file structure,
+   * close the file and release the inode.
+   * But we need keep the filep2->f_inode, incase of realloced by others.
+   */
+
+  ret = file_close_without_clear(filep2);
   if (ret < 0)
     {
+      inode_release(inode);
       return ret;
     }
-
-  /* Then clone the file structure */
-
-  memset(&temp, 0, sizeof(temp));
 
   /* The two filep don't share flags (the close-on-exec flag). */
 
   if (flags == O_CLOEXEC)
     {
-      temp.f_oflags = filep1->f_oflags | O_CLOEXEC;
+      filep2->f_oflags = filep1->f_oflags | O_CLOEXEC;
     }
   else
     {
-      temp.f_oflags = filep1->f_oflags & ~O_CLOEXEC;
+      filep2->f_oflags = filep1->f_oflags & ~O_CLOEXEC;
     }
 
-  temp.f_pos    = filep1->f_pos;
-  temp.f_inode  = inode;
+  filep2->f_priv  = NULL;
+  filep2->f_pos   = filep1->f_pos;
+  filep2->f_inode = inode;
 
   /* Call the open method on the file, driver, mountpoint so that it
    * can maintain the correct open counts.
@@ -116,7 +122,7 @@ int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
 
           if (inode->u.i_mops->dup)
             {
-              ret = inode->u.i_mops->dup(filep1, &temp);
+              ret = inode->u.i_mops->dup(filep1, filep2);
             }
         }
       else
@@ -124,25 +130,25 @@ int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
         {
           /* (Re-)open the pseudo file or device driver */
 
-          temp.f_priv = filep1->f_priv;
+          filep2->f_priv = filep1->f_priv;
 
           /* Add nonblock flags to avoid happening block when
            * calling open()
            */
 
-          temp.f_oflags |= O_NONBLOCK;
+          filep2->f_oflags |= O_NONBLOCK;
 
           if (inode->u.i_ops->open)
             {
-              ret = inode->u.i_ops->open(&temp);
+              ret = inode->u.i_ops->open(filep2);
             }
 
           if (ret >= 0 && (filep1->f_oflags & O_NONBLOCK) == 0)
             {
-              ret = file_ioctl(&temp, FIONBIO, 0);
+              ret = file_ioctl(filep2, FIONBIO, 0);
               if (ret < 0 && inode->u.i_ops->close)
                 {
-                  ret = inode->u.i_ops->close(&temp);
+                  inode->u.i_ops->close(filep2);
                 }
             }
         }
@@ -156,16 +162,17 @@ int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags)
         }
     }
 
-  /* If there is already an inode contained in the new file structure,
-   * close the file and release the inode.
-   */
+  /* Copy tag */
 
-  ret = file_close(filep2);
-  DEBUGASSERT(ret == 0);
+#ifdef CONFIG_FDSAN
+  filep2->f_tag_fdsan = filep1->f_tag_fdsan;
+#endif
 
-  /* Return the file structure */
+#ifdef CONFIG_FDCHECK
+  filep2->f_tag_fdcheck = filep1->f_tag_fdcheck;
+#endif
 
-  memcpy(filep2, &temp, sizeof(temp));
+  FS_ADD_BACKTRACE(filep2);
   return OK;
 }
 

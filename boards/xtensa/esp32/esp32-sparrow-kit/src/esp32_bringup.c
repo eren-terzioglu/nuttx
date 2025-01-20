@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32/esp32-sparrow-kit/src/esp32_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,11 +33,8 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
 
-#include <syslog.h>
 #include <errno.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
@@ -78,6 +77,10 @@
 
 #ifdef CONFIG_ESP32_I2C
 #  include "esp32_board_i2c.h"
+#endif
+
+#ifdef CONFIG_ESP32_I2S
+#  include "esp32_i2s.h"
 #endif
 
 #ifdef CONFIG_SENSORS_BMP180
@@ -342,6 +345,23 @@ int esp32_bringup(void)
 #endif
 
 #endif
+
+#ifdef CONFIG_ESP32_I2S
+
+#ifdef CONFIG_ESP32_I2S0
+
+  /* Configure I2S generic audio on I2S0 */
+
+  ret = board_i2sdev_initialize(ESP32_I2S0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize I2S%d driver: %d\n",
+             CONFIG_ESP32_I2S0, ret);
+    }
+
+#endif  /* CONFIG_ESP32_I2S0 */
+
+#endif /* CONFIG_ESP32_I2S */
 
 #ifdef CONFIG_SENSORS_BMP180
   /* Try to register BMP180 device in I2C0 */

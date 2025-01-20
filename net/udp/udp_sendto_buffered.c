@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/udp/udp_sendto_buffered.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -151,12 +153,6 @@ static void sendto_writebuffer_release(FAR struct udp_conn_s *conn)
           wrb = (FAR struct udp_wrbuffer_s *)sq_remfirst(&conn->write_q);
           DEBUGASSERT(wrb != NULL);
 
-          /* Do not need to release wb_iob, the life cycle of wb_iob is
-           * handed over to the network device
-           */
-
-          wrb->wb_iob = NULL;
-
           udp_wrbuffer_release(wrb);
 
           /* Set up for the next packet transfer by setting the connection
@@ -263,6 +259,11 @@ static int sendto_next_transfer(FAR struct udp_conn_s *conn)
        */
 
       conn->lport = HTONS(udp_select_port(conn->domain, &conn->u));
+      if (!conn->lport)
+        {
+          nerr("ERROR: Failed to get a local port!\n");
+          return -EADDRINUSE;
+        }
     }
 
   /* Get the device that will handle the remote packet transfers.  This
@@ -288,6 +289,16 @@ static int sendto_next_transfer(FAR struct udp_conn_s *conn)
       nwarn("WARNING: device is DOWN\n");
       return -EHOSTUNREACH;
     }
+
+#ifndef CONFIG_NET_IPFRAG
+  /* Sanity check if the packet len (with IP hdr) is greater than the MTU */
+
+  if (wrb->wb_iob->io_pktlen > devif_get_mtu(dev))
+    {
+      nerr("ERROR: Packet too long to send!\n");
+      return -EMSGSIZE;
+    }
+#endif
 
   /* If this is not the same device that we used in the last call to
    * udp_callback_alloc(), then we need to release and reallocate the old
@@ -440,6 +451,12 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
       dev->d_sndlen = wrb->wb_iob->io_pktlen - udpiplen;
       ninfo("wrb=%p sndlen=%d\n", wrb, dev->d_sndlen);
 
+      /* Do not need to release wb_iob, the life cycle of wb_iob is
+       * handed over to the network device
+       */
+
+      wrb->wb_iob = NULL;
+
 #ifdef NEED_IPDOMAIN_SUPPORT
       /* If both IPv4 and IPv6 support are enabled, then we will need to
        * select which one to use when generating the outgoing packet.
@@ -583,9 +600,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    * the ARP table.
    */
 
-#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
   if (psock->s_domain == PF_INET)
-#endif
     {
       in_addr_t destipaddr;
 
@@ -622,9 +637,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    * the neighbor table.
    */
 
-#ifdef CONFIG_NET_ARP_SEND
-  else
-#endif
+  if (psock->s_domain == PF_INET6)
     {
       FAR const uint16_t *destipaddr;
 
@@ -709,6 +722,13 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
        * unlocked here.
        */
 
+#ifdef CONFIG_NET_JUMBO_FRAME
+
+      /* alloc iob of gso pkt for udp data */
+
+      wrb = udp_wrbuffer_tryalloc(len + udpip_hdrsize(conn) +
+                                  CONFIG_NET_LL_GUARDSIZE);
+#else
       if (nonblock)
         {
           wrb = udp_wrbuffer_tryalloc();
@@ -718,6 +738,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
           wrb = udp_wrbuffer_timedalloc(udp_send_gettimeout(start,
                                                             timeout));
         }
+#endif
 
       if (wrb == NULL)
         {
@@ -782,6 +803,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
       else
         {
           memcpy(&wrb->wb_dest, to, tolen);
+          udp_connect(conn, to);
         }
 
       /* Skip l2/l3/l4 offset before copy */
@@ -919,7 +941,11 @@ int psock_udp_cansend(FAR struct udp_conn_s *conn)
    * many more.
    */
 
-  if (udp_wrbuffer_test() < 0 || iob_navail(false) <= 0)
+  if (udp_wrbuffer_test() < 0 || iob_navail(false) <= 0
+#if CONFIG_NET_SEND_BUFSIZE > 0
+      || udp_wrbuffer_inqueue_size(conn) >= conn->sndbufs
+#endif
+     )
     {
       return -EWOULDBLOCK;
     }

@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/iob/iob_alloc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,10 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
+#ifdef CONFIG_IOB_ALLOC
+#  include <nuttx/kmalloc.h>
+#endif
+#include <nuttx/nuttx.h>
 #include <nuttx/mm/iob.h>
 
 #include "iob.h"
@@ -96,6 +102,46 @@ static FAR struct iob_s *iob_alloc_committed(void)
   return iob;
 }
 
+static FAR struct iob_s *iob_tryalloc_internal(bool throttled)
+{
+  FAR struct iob_s *iob;
+#if CONFIG_IOB_THROTTLE > 0
+  int16_t count = (throttled ? g_iob_count - CONFIG_IOB_THROTTLE :
+                   g_iob_count);
+
+  /* If there are free I/O buffers for this allocation */
+
+  if (count > 0)
+#endif
+    {
+      /* Take the I/O buffer from the head of the free list */
+
+      iob = g_iob_freelist;
+      if (iob != NULL)
+        {
+          /* Remove the I/O buffer from the free list and decrement the
+           * counting semaphore(s) that tracks the number of available
+           * IOBs.
+           */
+
+          g_iob_freelist = iob->io_flink;
+
+          g_iob_count--;
+          DEBUGASSERT(g_iob_count >= 0);
+
+          /* Put the I/O buffer in a known state */
+
+          iob->io_flink  = NULL; /* Not in a chain */
+          iob->io_len    = 0;    /* Length of the data in the entry */
+          iob->io_offset = 0;    /* Offset to the beginning of data */
+          iob->io_pktlen = 0;    /* Total length of the packet */
+          return iob;
+        }
+    }
+
+  return NULL;
+}
+
 /****************************************************************************
  * Name: iob_allocwait
  *
@@ -114,7 +160,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
   int ret = OK;
 
 #if CONFIG_IOB_THROTTLE > 0
-  /* Select the semaphore count to check. */
+  /* Select the semaphore to wait. */
 
   sem = (throttled ? &g_throttle_sem : &g_iob_sem);
 #else
@@ -127,21 +173,25 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
    * we are waiting for I/O buffers to become free.
    */
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_iob_lock);
 
-  /* Try to get an I/O buffer.  If successful, the semaphore count will be
-   * decremented atomically.
-   */
+  /* Try to get an I/O buffer */
 
-  start = clock_systime_ticks();
-  iob   = iob_tryalloc(throttled);
-  while (ret == OK && iob == NULL)
+  iob = iob_tryalloc_internal(throttled);
+  if (iob == NULL)
     {
-      /* If not successful, then the semaphore count was less than or equal
-       * to zero (meaning that there are no free buffers).  We need to wait
-       * for an I/O buffer to be released and placed in the committed
-       * list.
-       */
+#if CONFIG_IOB_THROTTLE > 0
+      if (throttled)
+        {
+          g_throttle_wait++;
+        }
+      else
+#endif
+        {
+          g_iob_count--;
+        }
+
+      spin_unlock_irqrestore(&g_iob_lock, flags);
 
       if (timeout == UINT_MAX)
         {
@@ -149,6 +199,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
         }
       else
         {
+          start = clock_systime_ticks();
           ret = nxsem_tickwait_uninterruptible(sem,
                                    iob_allocwait_gettimeout(start, timeout));
         }
@@ -160,42 +211,32 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
            */
 
           iob = iob_alloc_committed();
-          if (iob == NULL)
-            {
-              /* We need release our count so that it is available to
-               * iob_tryalloc(), perhaps allowing another thread to take our
-               * count.  In that event, iob_tryalloc() will fail above and
-               * we will have to wait again.
-               */
-
-              sem->semcount++;
-              iob = iob_tryalloc(throttled);
-            }
-
-          /* REVISIT: I think this logic should be moved inside of
-           * iob_alloc_committed, so that it can exist inside of the critical
-           * section along with all other sem count changes.
-           */
-
-#if CONFIG_IOB_THROTTLE > 0
-          else
-            {
-              if (throttled)
-                {
-                  g_iob_sem.semcount--;
-                }
-              else
-                {
-                  g_throttle_sem.semcount--;
-                }
-            }
-#endif
+          DEBUGASSERT(iob != NULL);
         }
+
+      return iob;
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_iob_lock, flags);
   return iob;
 }
+
+#ifdef CONFIG_IOB_ALLOC
+/****************************************************************************
+ * Name: iob_free_dynamic
+ *
+ * Description:
+ *   Dummy free callback function, do nothing.
+ *
+ * Input Parameters:
+ *   data -
+ *
+ ****************************************************************************/
+
+static void iob_free_dynamic(FAR void *data)
+{
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -258,74 +299,101 @@ FAR struct iob_s *iob_tryalloc(bool throttled)
 {
   FAR struct iob_s *iob;
   irqstate_t flags;
-#if CONFIG_IOB_THROTTLE > 0
-  FAR sem_t *sem;
-#endif
-
-#if CONFIG_IOB_THROTTLE > 0
-  /* Select the semaphore count to check. */
-
-  sem = (throttled ? &g_throttle_sem : &g_iob_sem);
-#endif
 
   /* We don't know what context we are called from so we use extreme measures
    * to protect the free list:  We disable interrupts very briefly.
    */
 
   flags = spin_lock_irqsave(&g_iob_lock);
+  iob = iob_tryalloc_internal(throttled);
+  spin_unlock_irqrestore(&g_iob_lock, flags);
+  return iob;
+}
 
-#if CONFIG_IOB_THROTTLE > 0
-  /* If there are free I/O buffers for this allocation */
+#ifdef CONFIG_IOB_ALLOC
 
-  if (sem->semcount > 0 ||
-      (throttled && g_iob_sem.semcount - CONFIG_IOB_THROTTLE > 0))
-#endif
+/****************************************************************************
+ * Name: iob_alloc_dynamic
+ *
+ * Description:
+ *   Allocate an I/O buffer and playload from heap
+ *
+ * Input Parameters:
+ *   size    - The size of the io_data that is allocated.
+ *
+ *             +---------+
+ *             |   IOB   |
+ *             | io_data |--+
+ *             | buffer  |<-+
+ *             +---------+
+ *
+ ****************************************************************************/
+
+FAR struct iob_s *iob_alloc_dynamic(uint16_t size)
+{
+  FAR struct iob_s *iob;
+  size_t alignsize;
+
+  alignsize = ALIGN_UP(sizeof(struct iob_s), CONFIG_IOB_ALIGNMENT) + size;
+
+  iob = kmm_memalign(CONFIG_IOB_ALIGNMENT, alignsize);
+  if (iob)
     {
-      /* Take the I/O buffer from the head of the free list */
-
-      iob = g_iob_freelist;
-      if (iob != NULL)
-        {
-          /* Remove the I/O buffer from the free list and decrement the
-           * counting semaphore(s) that tracks the number of available
-           * IOBs.
-           */
-
-          g_iob_freelist = iob->io_flink;
-
-          /* Take a semaphore count.  Note that we cannot do this in
-           * in the orthodox way by calling nxsem_wait() or nxsem_trywait()
-           * because this function may be called from an interrupt
-           * handler. Fortunately we know at at least one free buffer
-           * so a simple decrement is all that is needed.
-           */
-
-          g_iob_sem.semcount--;
-          DEBUGASSERT(g_iob_sem.semcount >= 0);
-
-#if CONFIG_IOB_THROTTLE > 0
-          /* The throttle semaphore is a little more complicated because
-           * it can be negative!  Decrementing is still safe, however.
-           *
-           * Note: usually g_throttle_sem.semcount >= -CONFIG_IOB_THROTTLE.
-           * But it can be smaller than that if there are blocking threads.
-           */
-
-          g_throttle_sem.semcount--;
-#endif
-
-          spin_unlock_irqrestore(&g_iob_lock, flags);
-
-          /* Put the I/O buffer in a known state */
-
-          iob->io_flink  = NULL; /* Not in a chain */
-          iob->io_len    = 0;    /* Length of the data in the entry */
-          iob->io_offset = 0;    /* Offset to the beginning of data */
-          iob->io_pktlen = 0;    /* Total length of the packet */
-          return iob;
-        }
+      iob->io_flink   = NULL;             /* Not in a chain */
+      iob->io_len     = 0;                /* Length of the data in the entry */
+      iob->io_offset  = 0;                /* Offset to the beginning of data */
+      iob->io_bufsize = size;             /* Total length of the iob buffer */
+      iob->io_pktlen  = 0;                /* Total length of the packet */
+      iob->io_free    = iob_free_dynamic; /* Customer free callback */
+      iob->io_data    = (FAR uint8_t *)ALIGN_UP((uintptr_t)(iob + 1),
+                                                CONFIG_IOB_ALIGNMENT);
     }
 
-  spin_unlock_irqrestore(&g_iob_lock, flags);
-  return NULL;
+  return iob;
 }
+
+/****************************************************************************
+ * Name: iob_alloc_with_data
+ *
+ * Description:
+ *   Allocate an I/O buffer from heap and attach the external payload
+ *
+ * Input Parameters:
+ *   data    - Make io_data point to a specific address, the caller is
+ *             responsible for the memory management. The caller should
+ *             ensure that the memory is not freed before the iob is freed.
+ *
+ *             +---------+  +-->+--------+
+ *             |   IOB   |  |   |  data  |
+ *             | io_data |--+   +--------+
+ *             +---------+
+ *
+ *   size    - The size of the data parameter
+ *   free_cb - Notify the caller when the iob is freed. The caller can
+ *             perform additional operations on the data before it is freed.
+ *             The free_cb is called when the iob is freed.
+ *
+ ****************************************************************************/
+
+FAR struct iob_s *iob_alloc_with_data(FAR void *data, uint16_t size,
+                                      iob_free_cb_t free_cb)
+{
+  FAR struct iob_s *iob;
+
+  DEBUGASSERT(free_cb != NULL);
+
+  iob = kmm_malloc(sizeof(struct iob_s));
+  if (iob)
+    {
+      iob->io_flink   = NULL;    /* Not in a chain */
+      iob->io_len     = 0;       /* Length of the data in the entry */
+      iob->io_offset  = 0;       /* Offset to the beginning of data */
+      iob->io_bufsize = size;    /* Total length of the iob buffer */
+      iob->io_pktlen  = 0;       /* Total length of the packet */
+      iob->io_free    = free_cb; /* Customer free callback */
+      iob->io_data    = data;
+    }
+
+  return iob;
+}
+#endif

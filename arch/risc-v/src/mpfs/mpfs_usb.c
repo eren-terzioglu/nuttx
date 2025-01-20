@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_usb.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -50,6 +52,7 @@
 #include <arch/board/board.h>
 
 #include "hardware/mpfs_usb.h"
+#include "hardware/mpfs_mpucfg.h"
 #include "mpfs_gpio.h"
 #include "riscv_internal.h"
 #include "chip.h"
@@ -107,13 +110,6 @@
 #define MPFS_TRACEINTID_DISPATCH           0x0013
 #define MPFS_TRACEINTID_EP0_STALLSENT      0x0014
 #define MPFS_TRACEINTID_DATA_END           0x0015
-
-/* USB PMP configuration registers */
-
-#define MPFS_PMPCFG_USB_0    (MPFS_MPUCFG_BASE + 0x600)
-#define MPFS_PMPCFG_USB_1    (MPFS_MPUCFG_BASE + 0x608)
-#define MPFS_PMPCFG_USB_2    (MPFS_MPUCFG_BASE + 0x610)
-#define MPFS_PMPCFG_USB_3    (MPFS_MPUCFG_BASE + 0x618)
 
 /* Reset and clock control registers */
 
@@ -228,6 +224,8 @@ static void   mpfs_epset_reset(struct mpfs_usbdev_s *priv, uint16_t epset);
  * Private Data
  ****************************************************************************/
 
+static spinlock_t g_mpfs_modifyreg_lock = SP_UNLOCKED;
+
 static struct mpfs_usbdev_s g_usbd;
 static uint8_t g_clkrefs;
 
@@ -301,12 +299,12 @@ static void mpfs_modifyreg16(uintptr_t addr, uint16_t clearbits,
   DEBUGASSERT((addr >= MPFS_USB_BASE) && addr < (MPFS_USB_BASE +
                MPFS_USB_REG_MAX));
 
-  flags   = spin_lock_irqsave(NULL);
+  flags   = spin_lock_irqsave(&g_mpfs_modifyreg_lock);
   regval  = getreg16(addr);
   regval &= ~clearbits;
   regval |= setbits;
   putreg16(regval, addr);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_mpfs_modifyreg_lock, flags);
 }
 
 /****************************************************************************
@@ -335,12 +333,12 @@ static void mpfs_modifyreg8(uintptr_t addr, uint8_t clearbits,
   DEBUGASSERT((addr >= MPFS_USB_BASE) && addr < (MPFS_USB_BASE +
                MPFS_USB_REG_MAX));
 
-  flags   = spin_lock_irqsave(NULL);
+  flags   = spin_lock_irqsave(&g_mpfs_modifyreg_lock);
   regval  = getreg8(addr);
   regval &= ~clearbits;
   regval |= setbits;
   putreg8(regval, addr);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&g_mpfs_modifyreg_lock, flags);
 }
 
 /****************************************************************************
@@ -958,7 +956,7 @@ static int mpfs_req_write(struct mpfs_usbdev_s *priv,
           return -ENOENT;
         }
 
-      uinfo("epno=%d req=%p: len=%d xfrd=%d inflight=%d\n",
+      uinfo("epno=%d req=%p: len=%zu xfrd=%zu inflight=%d\n",
             epno, privreq, privreq->req.len, privreq->req.xfrd,
             privreq->inflight);
 
@@ -1137,7 +1135,7 @@ static int mpfs_req_read(struct mpfs_usbdev_s *priv,
           return OK;
         }
 
-      uinfo("EP%d: req.len=%d xfrd=%d recvsize=%d\n",
+      uinfo("EP%d: req.len=%zu xfrd=%zu recvsize=%d\n",
             epno, privreq->req.len, privreq->req.xfrd, recvsize);
 
       /* Ignore any attempt to receive a zero length packet */
@@ -1718,7 +1716,7 @@ static void *mpfs_ep_allocbuffer(struct usbdev_ep_s *ep, uint16_t nbytes)
 {
   /* There is not special buffer allocation requirement */
 
-  return kumm_malloc(nbytes);
+  return kmm_malloc(nbytes);
 }
 #endif
 
@@ -1745,7 +1743,7 @@ static void mpfs_ep_freebuffer(struct usbdev_ep_s *ep, void *buf)
 {
   /* There is not special buffer allocation requirement */
 
-  kumm_free(buf);
+  kmm_free(buf);
 }
 #endif
 
@@ -3619,7 +3617,7 @@ static void mpfs_usb_iomux(void)
 
 #ifdef CONFIG_USBDEV_DMA
   /* DMA operations need to open the USB PMP registers for proper
-   * operation. If not configured, apply default settings.
+   * operation.
    */
 
   uint64_t pmpcfg_usb_x;
@@ -3628,28 +3626,24 @@ static void mpfs_usb_iomux(void)
   if ((pmpcfg_usb_x & 0x1ffffff000000000llu) != 0x1f00000000000000llu)
     {
       uerr("Please check the MPFS_PMPCFG_USB_0 register.\n");
-      putreg64(0x1f00000fffffffffllu, MPFS_PMPCFG_USB_0);
     }
 
   pmpcfg_usb_x = getreg64(MPFS_PMPCFG_USB_1);
   if ((pmpcfg_usb_x & 0x1ffffff000000000llu) != 0x1f00000000000000llu)
     {
       uerr("Please check the MPFS_PMPCFG_USB_1 register.\n");
-      putreg64(0x1f00000fffffffffllu, MPFS_PMPCFG_USB_1);
     }
 
   pmpcfg_usb_x = getreg64(MPFS_PMPCFG_USB_2);
   if ((pmpcfg_usb_x & 0x1ffffff000000000llu) != 0x1f00000000000000llu)
     {
       uerr("Please check the MPFS_PMPCFG_USB_2 register.\n");
-      putreg64(0x1f00000fffffffffllu, MPFS_PMPCFG_USB_2);
     }
 
   pmpcfg_usb_x = getreg64(MPFS_PMPCFG_USB_3);
   if ((pmpcfg_usb_x & 0x1ffffff000000000llu) != 0x1f00000000000000llu)
     {
       uerr("Please check the MPFS_PMPCFG_USB_3 register.\n");
-      putreg64(0x1f00000fffffffffllu, MPFS_PMPCFG_USB_3);
     }
 #endif
 }

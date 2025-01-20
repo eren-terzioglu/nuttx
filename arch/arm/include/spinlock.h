@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/include/spinlock.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,8 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #endif /* __ASSEMBLY__ */
+
+#include <arch/barriers.h>
 
 /****************************************************************************
  * Pre-processor Prototypes
@@ -59,12 +63,12 @@
  *            all memory accesses are complete
  */
 
-#define SP_DSB(n) __asm__ __volatile__ ("dsb sy" : : : "memory")
-#define SP_DMB(n) __asm__ __volatile__ ("dmb st" : : : "memory")
+#define UP_DSB() __asm__ __volatile__ ("dsb sy" : : : "memory")
+#define UP_DMB() __asm__ __volatile__ ("dmb st" : : : "memory")
 
 #ifdef CONFIG_ARM_HAVE_WFE_SEV
-#define SP_WFE() __asm__ __volatile__ ("wfe" : : : "memory")
-#define SP_SEV() __asm__ __volatile__ ("sev" : : : "memory")
+#define UP_WFE() __asm__ __volatile__ ("wfe" : : : "memory")
+#define UP_SEV() __asm__ __volatile__ ("sev" : : : "memory")
 #endif
 
 /****************************************************************************
@@ -113,6 +117,31 @@ typedef uint8_t spinlock_t;
  *   (meaning that we successfully obtained the lock)
  *
  ****************************************************************************/
+
+#if defined(CONFIG_ARCH_HAVE_TESTSET) && !defined(CONFIG_ARCH_HAVE_CUSTOM_TESTSET)
+static inline_function spinlock_t up_testset(volatile spinlock_t *lock)
+{
+  spinlock_t ret = SP_UNLOCKED;
+
+  __asm__ __volatile__
+  (
+    "1:                    \n"
+    "ldrexb   %0, [%2]     \n"
+    "cmp      %0, %1       \n"
+    "beq      2f           \n"
+    "strexb   %0, %1, [%2] \n"
+    "cmp      %0, %1       \n"
+    "beq      1b           \n"
+    "dmb                   \n"
+    "2:                    \n"
+    : "+r" (ret)
+    : "r" (SP_LOCKED), "r" (lock)
+    : "memory"
+  );
+
+  return ret;
+}
+#endif
 
 /* See prototype in nuttx/include/nuttx/spinlock.h */
 

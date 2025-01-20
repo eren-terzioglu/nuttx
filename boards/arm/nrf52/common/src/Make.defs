@@ -1,6 +1,8 @@
 #############################################################################
 # boards/arm/nrf52/common/src/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,18 @@ endif
 
 ifeq ($(CONFIG_SENSORS_LSM9DS1),y)
 CSRCS += nrf52_lsm9ds1.c
+endif
+
+ifeq ($(CONFIG_BOARDCTL_RESET),y)
+CSRCS += nrf52_reset.c
+endif
+
+ifeq ($(CONFIG_NRF52_RADIO_IEEE802154),y)
+CSRCS += nrf52_ieee802154.c
+endif
+
+ifeq ($(CONFIG_IEEE802154_MRF24J40),y)
+CSRCS += nrf52_mrf24j40.c
 endif
 
 DEPPATH += --dep-path src

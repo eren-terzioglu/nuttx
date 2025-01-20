@@ -1,6 +1,8 @@
 # ##############################################################################
 # libs/libc/machine/arm/armv7-m/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -20,26 +22,40 @@
 
 set(SRCS)
 
+if(CONFIG_ARCH_TOOLCHAIN_GNU)
+  set(ARCH_TOOLCHAIN_DIR gnu)
+endif()
+
+if(CONFIG_ARMV7M_MEMCHR)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memchr.S)
+endif()
+
 if(CONFIG_ARMV7M_MEMCPY)
-  list(APPEND SRCS gnu/arch_memcpy.S)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memcpy.S)
+endif()
+
+if(CONFIG_ARMV7M_MEMSET)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memset.S)
+endif()
+
+if(CONFIG_ARMV7M_MEMMOVE)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_memmove.S)
+endif()
+
+if(CONFIG_ARMV7M_STRCMP)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_strcmp.S)
+endif()
+
+if(CONFIG_ARMV7M_STRCPY)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_strcpy.S)
+endif()
+
+if(CONFIG_ARMV7M_STRLEN)
+  list(APPEND SRCS ${ARCH_TOOLCHAIN_DIR}/arch_strlen.S)
 endif()
 
 if(CONFIG_LIBC_ARCH_ELF)
   list(APPEND SRCS arch_elf.c)
-endif()
-
-if(CONFIG_MACHINE_OPTS_ARMV7M)
-  if(CONFIG_LIBM_ARCH_FABSF)
-    list(APPEND SRCS arch_fabsf.c)
-  endif()
-
-  if(CONFIG_LIBM_ARCH_SQRTF)
-    list(APPEND SRCS arch_sqrtf.c)
-  endif()
-endif()
-
-if(CONFIG_ARCH_SETJMP_H)
-  list(APPEND SRCS gnu/arch_setjmp.S)
 endif()
 
 target_sources(c PRIVATE ${SRCS})

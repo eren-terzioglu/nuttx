@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/gdbstub.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,19 +28,45 @@
  ****************************************************************************/
 
 #include <stdlib.h>
+#include <nuttx/arch.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define GDB_STOPREASON_NONE          0x00
+#define GDB_STOPREASON_WATCHPOINT_RO 0x01
+#define GDB_STOPREASON_WATCHPOINT_WO 0x02
+#define GDB_STOPREASON_WATCHPOINT_RW 0x03
+#define GDB_STOPREASON_BREAKPOINT    0x04
+#define GDB_STOPREASON_STEPPOINT     0x05
+#define GDB_STOPREASON_CTRLC         0x06
 
 /****************************************************************************
  * Type Definitions
  ****************************************************************************/
 
 struct gdb_state_s;
-typedef CODE ssize_t (*gdb_send_func_t)(FAR void *priv, FAR void *buf,
+typedef CODE ssize_t (*gdb_send_func_t)(FAR void *priv, FAR const char *buf,
                                         size_t len);
 typedef CODE ssize_t (*gdb_recv_func_t)(FAR void *priv, FAR void *buf,
                                         size_t len);
 
 typedef CODE int (*gdb_monitor_func_t)(FAR struct gdb_state_s *state,
                                        FAR const char *cmd);
+
+/****************************************************************************
+ * Name: gdbstub_debugpoint_add
+ ****************************************************************************/
+
+int gdb_debugpoint_add(int type, void *addr, size_t size,
+                       debug_callback_t callback, void *arg);
+
+/****************************************************************************
+ * Name: gdbstub_debugpoint_remove
+ ****************************************************************************/
+
+int gdb_debugpoint_remove(int type, void *addr, size_t size);
 
 /****************************************************************************
  * Name: gdb_state_init
@@ -108,6 +136,7 @@ int gdb_console_message(FAR struct gdb_state_s *state, FAR const char *msg);
  *
  ****************************************************************************/
 
-int gdb_process(FAR struct gdb_state_s *state);
+int gdb_process(FAR struct gdb_state_s *state, int stopreason,
+                FAR void *stopaddr);
 
 #endif /* __INCLUDE_NUTTX_GDBSTUB_H */

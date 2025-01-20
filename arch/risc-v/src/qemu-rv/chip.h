@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/qemu-rv/chip.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@
 #include "hardware/qemu_rv_clint.h"
 #include "hardware/qemu_rv_memorymap.h"
 #include "hardware/qemu_rv_plic.h"
+#include "hardware/qemu_rv_aplic.h"
 
 #include "riscv_internal.h"
 #include "riscv_percpu.h"
@@ -55,7 +58,7 @@
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
 .macro  setintstack tmp0, tmp1
-  riscv_mhartid \tmp0
+  up_cpu_index \tmp0
   li    \tmp1, STACK_ALIGN_DOWN(CONFIG_ARCH_INTERRUPTSTACK)
   mul   \tmp1, \tmp0, \tmp1
   la    \tmp0, g_intstacktop

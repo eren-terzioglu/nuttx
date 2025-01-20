@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv8-m/gnu/arch_strlen.S
  *
- * Copyright (c) 2010-2011,2013 Linaro Limited
- *  All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2010-2011,2013 Linaro Limited, 2015 ARM Ltd.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,6 +66,16 @@
 
 #ifdef LIBC_BUILD_STRLEN
 
+#include "acle-compat.h"
+
+#ifndef __ARM_FEATURE_BTI_DEFAULT
+#  define __ARM_FEATURE_BTI_DEFAULT 0
+#endif
+
+#ifndef __ARM_FEATURE_PAC_DEFAULT
+#  define __ARM_FEATURE_PAC_DEFAULT 0
+#endif
+
 	.macro def_fn f p2align=0
 	.text
 	.p2align \p2align
@@ -105,7 +115,14 @@
 #define tmp1		r4		/* Overlaps const_0  */
 #define tmp2		r5
 
-def_fn	strlen p2align=6
+def_fn	ARCH_LIBCFUN(strlen) p2align=6
+#if __ARM_FEATURE_PAC_DEFAULT
+#  if __ARM_FEATURE_BTI_DEFAULT
+	pacbti	ip, lr, sp
+#  else
+	pac	ip, lr, sp
+#  endif /* __ARM_FEATURE_BTI_DEFAULT */
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	pld	[srcin, #0]
 	strd	r4, r5, [sp, #-8]!
 	bic	src, srcin, #7
@@ -167,6 +184,9 @@ def_fn	strlen p2align=6
 	clz	data1a, data1a
 	ldrd	r4, r5, [sp], #8
 	add	result, result, data1a, lsr #3	/* Bits -> Bytes.  */
+#if __ARM_FEATURE_PAC_DEFAULT
+	aut	ip, lr, sp
+#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 .Lmisaligned8:
@@ -183,6 +203,6 @@ def_fn	strlen p2align=6
 	movne	data1a, const_m1
 	mov	const_0, #0
 	b	.Lstart_realigned
-	.size	strlen, . - strlen
+	.size	ARCH_LIBCFUN(strlen), . - ARCH_LIBCFUN(strlen)
 
 #endif

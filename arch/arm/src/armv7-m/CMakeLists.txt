@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/arm/src/armv7-m/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -24,6 +26,7 @@ set(SRCS
     arm_exception.S
     arm_saveusercontext.S
     arm_busfault.c
+    arm_dbgmonitor.c
     arm_cache.c
     arm_cpuinfo.c
     arm_doirq.c
@@ -31,6 +34,7 @@ set(SRCS
     arm_initialstate.c
     arm_itm.c
     arm_memfault.c
+    arm_perf.c
     arm_schedulesigaction.c
     arm_sigdeliver.c
     arm_svcall.c
@@ -38,11 +42,8 @@ set(SRCS
     arm_tcbinfo.c
     arm_trigger_irq.c
     arm_usagefault.c
-    arm_vectors.c)
-
-if(CONFIG_ARCH_PERF_EVENTS)
-  list(APPEND SRCS arm_perf.c)
-endif()
+    arm_vectors.c
+    arm_dbgmonitor.c)
 
 if(CONFIG_ARMV7M_SYSTICK)
   list(APPEND SRCS arm_systick.c)
@@ -66,6 +67,10 @@ endif()
 
 if(CONFIG_ARM_MPU OR CONFIG_ARM_MPU_EARLY_RESET)
   list(APPEND SRCS arm_mpu.c)
+endif()
+
+if(CONFIG_ARM_COREDUMP_REGION)
+  list(APPEND SRCS arm_dumpnvic.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

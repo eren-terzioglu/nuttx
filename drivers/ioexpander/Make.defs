@@ -1,6 +1,8 @@
 ############################################################################
 # drivers/ioexpander/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -30,6 +32,10 @@ endif
 
 ifeq ($(CONFIG_IOEXPANDER_DUMMY),y)
   CSRCS += ioe_dummy.c
+endif
+
+ifeq ($(CONFIG_IOEXPANDER_ICJX),y)
+  CSRCS += icjx.c
 endif
 
 ifeq ($(CONFIG_IOEXPANDER_ISO1H812G),y)

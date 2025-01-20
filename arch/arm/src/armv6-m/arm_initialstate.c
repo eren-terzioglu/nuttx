@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/armv6-m/arm_initialstate.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -104,6 +106,12 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_XPSR]    = ARMV6M_XPSR_T;
 
+  /* All tasks need set to pic address to special register */
+
+#ifdef CONFIG_BUILD_PIC
+  __asm__ ("mov %0, r9" : "=r"(xcp->regs[REG_R9]));
+#endif
+
   /* If this task is running PIC, then set the PIC base register to the
    * address of the allocated D-Space region.
    */
@@ -157,11 +165,7 @@ void up_initial_state(struct tcb_s *tcb)
 
 noinline_function void arm_initialize_stack(void)
 {
-#ifdef CONFIG_SMP
-  uint32_t stack = (uint32_t)arm_intstack_top();
-#else
-  uint32_t stack = (uint32_t)g_intstacktop;
-#endif
+  uint32_t stack = up_get_intstackbase(this_cpu()) + INTSTACK_SIZE;
   uint32_t tempa = 0;
   uint32_t tempb = 2;
 
@@ -172,6 +176,7 @@ noinline_function void arm_initialize_stack(void)
 
       "mov %1, sp\n"
       "msr psp, %1\n"
+      "isb sy\n"
 
       /* Select PSP */
 
@@ -183,6 +188,7 @@ noinline_function void arm_initialize_stack(void)
       /* Initialize MSP */
 
       "msr msp, %0\n"
+      "isb sy\n"
       :
       : "r" (stack), "r" (tempa), "r" (tempb)
       : "memory");

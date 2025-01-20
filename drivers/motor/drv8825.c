@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/motor/drv8825.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -127,7 +129,7 @@ static int drv8825_work(FAR struct stepper_lowerhalf_s *dev,
       stpwarn("Delay is clamped to 2 us\n");
     }
 
-  stpinfo("Delay is %ld us\n", delay);
+  stpinfo("Delay is %d us\n", delay);
 
   /* Set direction */
 
@@ -314,7 +316,7 @@ int drv8825_register(FAR const char *devpath, FAR struct drv8825_ops_s *ops)
   priv->ops = ops;
 
   lower = kmm_malloc(sizeof(struct stepper_lowerhalf_s));
-  if (priv == NULL)
+  if (lower == NULL)
     {
       stperr("Failed to allocate instance\n");
       kmm_free(priv);

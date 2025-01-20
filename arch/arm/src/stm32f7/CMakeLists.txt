@@ -1,6 +1,8 @@
 # ##############################################################################
 # arch/arm/src/stm32f7/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -33,8 +35,7 @@ list(
   stm32_start.c
   stm32_capture.c
   stm32_uid.c
-  stm32_waste.c
-)
+  stm32_waste.c)
 
 if(CONFIG_STM32F7_TICKLESS_TIMER)
   list(APPEND SRCS stm32_tickless.c)
@@ -94,6 +95,10 @@ if(CONFIG_STM32F7_I2C)
   list(APPEND SRCS stm32_i2c.c)
 endif()
 
+if(CONFIG_STM32F7_I2S)
+  list(APPEND SRCS stm32_i2s.c)
+endif()
+
 if(CONFIG_STM32F7_SPI)
   list(APPEND SRCS stm32_spi.c)
 endif()
@@ -110,9 +115,9 @@ if(CONFIG_USBHOST)
   list(APPEND SRCS stm32_otghost.c)
   if(CONFIG_USBHOST_TRACE)
     list(APPEND SRCS stm32_usbhost.c)
-    elseif(CONFIG_DEBUG_USB)
-      list(APPEND SRCS stm32_usbhost.c)
-    endif()
+  elseif(CONFIG_DEBUG_USB)
+    list(APPEND SRCS stm32_usbhost.c)
+  endif()
 endif()
 
 if(CONFIG_STM32F7_TIM)

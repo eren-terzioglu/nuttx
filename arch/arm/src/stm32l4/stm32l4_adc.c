@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32l4/stm32l4_adc.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@
 #include <string.h>
 
 #include <arch/board/board.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
@@ -1169,7 +1172,7 @@ static void adc_inj_startconv(struct stm32_dev_s *priv, bool enable)
         }
     }
 }
-#endif  /* ADC_HAVE_INJECTED */
+#endif /* ADC_HAVE_INJECTED */
 
 /****************************************************************************
  * Name: adc_rccreset
@@ -2279,7 +2282,7 @@ static int adc3_interrupt(int irq, void *context, void *arg)
   return OK;
 }
 #endif
-#endif  /* CONFIG_STM32L4_ADC_NOIRQ */
+#endif /* CONFIG_STM32L4_ADC_NOIRQ */
 
 #ifdef ADC_HAVE_DMA
 /****************************************************************************
@@ -2408,7 +2411,7 @@ static void adc_dmaconvcallback(DMA_HANDLE handle,
   adc_modifyreg(priv, STM32L4_ADC_CFGR_OFFSET, 0, ADC_CFGR_DMAEN);
 }
 #endif
-#endif  /* ADC_HAVE_DMA */
+#endif /* ADC_HAVE_DMA */
 
 #ifdef CONFIG_STM32L4_ADC_LL_OPS
 
@@ -2589,7 +2592,7 @@ static void adc_llops_dma_stop(struct stm32_adc_dev_s *adc)
     }
 }
 
-#endif  /* ADC_HAVE_DMA */
+#endif /* ADC_HAVE_DMA */
 
 /****************************************************************************
  * Name: adc_llops_extsel_set
@@ -2644,7 +2647,7 @@ static void adc_llops_inj_startconv(struct stm32_adc_dev_s *dev,
   adc_inj_startconv(priv, enable);
 }
 
-#endif  /* ADC_HAVE_INJECTED */
+#endif /* ADC_HAVE_INJECTED */
 
 /****************************************************************************
  * Name: adc_llops_dumpregs
@@ -2657,7 +2660,7 @@ static void adc_llops_dumpregs(struct stm32_adc_dev_s *dev)
   adc_dumpregs(priv);
 }
 
-#endif  /* CONFIG_STM32L4_ADC_LL_OPS */
+#endif /* CONFIG_STM32L4_ADC_LL_OPS */
 
 /****************************************************************************
  * Public Functions

@@ -1,6 +1,8 @@
 /****************************************************************************
  * fs/zipfs/zip_vfs.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,8 @@
 #include <nuttx/fs/ioctl.h>
 
 #include <unzip.h>
+
+#include "fs_heap.h"
 
 /****************************************************************************
  * Private Types
@@ -134,6 +138,9 @@ const struct mountpt_operations g_zipfs_operations =
   NULL,                /* ioctl */
   NULL,                /* mmap */
   NULL,                /* truncate */
+  NULL,                /* poll */
+  NULL,                /* readv */
+  NULL,                /* writev */
 
   NULL,                /* sync */
   zipfs_dup,           /* dup */
@@ -167,7 +174,7 @@ static voidpf zipfs_real_open(voidpf opaque, FAR const void *filename,
   FAR struct file *filep;
   int ret;
 
-  filep = kmm_malloc(sizeof(struct file));
+  filep = fs_heap_malloc(sizeof(struct file));
   if (filep == NULL)
     {
       return NULL;
@@ -176,7 +183,7 @@ static voidpf zipfs_real_open(voidpf opaque, FAR const void *filename,
   ret = file_open(filep, filename, O_RDONLY);
   if (ret < 0)
     {
-      kmm_free(filep);
+      fs_heap_free(filep);
       return NULL;
     }
 
@@ -208,7 +215,7 @@ static int zipfs_real_close(voidpf opaque, voidpf stream)
   int ret;
 
   ret = file_close(stream);
-  kmm_free(stream);
+  fs_heap_free(stream);
   return ret;
 }
 
@@ -245,7 +252,7 @@ static int zipfs_open(FAR struct file *filep, FAR const char *relpath,
 
   DEBUGASSERT(fs != NULL);
 
-  fp = kmm_malloc(sizeof(*fp) + strlen(relpath));
+  fp = fs_heap_malloc(sizeof(*fp) + strlen(relpath));
   if (fp == NULL)
     {
       return -ENOMEM;
@@ -289,7 +296,7 @@ err_with_zip:
 err_with_mutex:
       nxmutex_destroy(&fp->lock);
 err_with_fp:
-      kmm_free(fp);
+      fs_heap_free(fp);
     }
 
   return ret;
@@ -302,8 +309,8 @@ static int zipfs_close(FAR struct file *filep)
 
   ret = zipfs_convert_result(unzClose(fp->uf));
   nxmutex_destroy(&fp->lock);
-  kmm_free(fp->seekbuf);
-  kmm_free(fp);
+  fs_heap_free(fp->seekbuf);
+  fs_heap_free(fp);
   return ret;
 }
 
@@ -330,7 +337,7 @@ static off_t zipfs_skip(FAR struct zipfs_file_s *fp, off_t amount)
 
   if (fp->seekbuf == NULL)
     {
-      fp->seekbuf = kmm_malloc(CONFIG_ZIPFS_SEEK_BUFSIZE);
+      fp->seekbuf = fs_heap_malloc(CONFIG_ZIPFS_SEEK_BUFSIZE);
       if (fp->seekbuf == NULL)
         {
           return -ENOMEM;
@@ -485,7 +492,7 @@ static int zipfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   DEBUGASSERT(fs != NULL);
 
-  zdir = kmm_malloc(sizeof(*zdir));
+  zdir = fs_heap_malloc(sizeof(*zdir));
   if (zdir == NULL)
     {
       return -ENOMEM;
@@ -494,7 +501,7 @@ static int zipfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   ret = nxmutex_init(&zdir->lock);
   if (ret < 0)
     {
-      kmm_free(zdir);
+      fs_heap_free(zdir);
       return ret;
     }
 
@@ -502,7 +509,7 @@ static int zipfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   if (zdir->uf == NULL)
     {
       nxmutex_destroy(&zdir->lock);
-      kmm_free(zdir);
+      fs_heap_free(zdir);
       return -EINVAL;
     }
 
@@ -520,7 +527,7 @@ static int zipfs_closedir(FAR struct inode *mountpt,
   zdir = (FAR struct zipfs_dir_s *)dir;
   ret = zipfs_convert_result(unzClose(zdir->uf));
   nxmutex_destroy(&zdir->lock);
-  kmm_free(zdir);
+  fs_heap_free(zdir);
   return ret;
 }
 
@@ -583,7 +590,7 @@ static int zipfs_bind(FAR struct inode *driver, FAR const void *data,
       return -ENODEV;
     }
 
-  fs = kmm_zalloc(sizeof(struct zipfs_mountpt_s) + strlen(data));
+  fs = fs_heap_zalloc(sizeof(struct zipfs_mountpt_s) + strlen(data));
   if (fs == NULL)
     {
       return -ENOMEM;
@@ -592,7 +599,7 @@ static int zipfs_bind(FAR struct inode *driver, FAR const void *data,
   uf = unzOpen2_64(data, &zipfs_real_ops);
   if (uf == NULL)
     {
-      kmm_free(fs);
+      fs_heap_free(fs);
       return -EINVAL;
     }
 
@@ -606,7 +613,7 @@ static int zipfs_bind(FAR struct inode *driver, FAR const void *data,
 static int zipfs_unbind(FAR void *handle, FAR struct inode **driver,
                         unsigned int flags)
 {
-  kmm_free(handle);
+  fs_heap_free(handle);
   return OK;
 }
 

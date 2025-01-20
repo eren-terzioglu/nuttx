@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32s2/esp32s2-kaluga-1/src/esp32s2_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,9 +33,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
@@ -82,6 +82,10 @@
 #ifdef CONFIG_SPI_SLAVE_DRIVER
 #  include "esp32s2_spi.h"
 #  include "esp32s2_board_spislavedev.h"
+#endif
+
+#ifdef CONFIG_RTC_DRIVER
+#  include "esp32s2_rtc_lowerhalf.h"
 #endif
 
 #include "esp32s2-kaluga-1.h"
@@ -311,6 +315,17 @@ int esp32s2_bringup(void)
 #endif /* CONFIG_AUDIO_ES8311 */
 
 #endif /* CONFIG_ESP32S2_I2S */
+
+#ifdef CONFIG_RTC_DRIVER
+  /* Instantiate the ESP32 RTC driver */
+
+  ret = esp32s2_rtc_driverinit();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
+    }
+#endif
 
   /* If we got here then perhaps not all initialization was successful, but
    * at least enough succeeded to bring-up NSH with perhaps reduced

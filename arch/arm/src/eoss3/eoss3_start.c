@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/eoss3/eoss3_start.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -151,6 +153,10 @@ void __start(void)
     }
 
   showprogress('C');
+
+#ifdef CONFIG_ARMV7M_STACKCHECK
+  arm_stack_check_init();
+#endif
 
 #ifdef CONFIG_ARMV7M_ITMSYSLOG
   /* Perform ARMv7-M ITM SYSLOG initialization */

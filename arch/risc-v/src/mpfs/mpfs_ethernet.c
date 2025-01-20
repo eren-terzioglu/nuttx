@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/mpfs_ethernet.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -58,6 +60,9 @@
 #include "mpfs_dsn.h"
 #include "mpfs_i2c.h"
 
+#include "hardware/mpfs_ethernet.h"
+#include "hardware/mpfs_mpucfg.h"
+
 #if defined(CONFIG_MPFS_ETH0_PHY_KSZ9477) ||\
     defined(CONFIG_MPFS_ETH1_PHY_KSZ9477)
 #  if !defined(CONFIG_MPFS_MAC_SGMII)
@@ -77,15 +82,6 @@
 #endif
 
 #if defined(CONFIG_NET) && defined(CONFIG_MPFS_ETHMAC)
-
-#define MPFS_PMPCFG_ETH0_0   (MPFS_MPUCFG_BASE + 0x400)
-#define MPFS_PMPCFG_ETH0_1   (MPFS_MPUCFG_BASE + 0x408)
-#define MPFS_PMPCFG_ETH0_2   (MPFS_MPUCFG_BASE + 0x410)
-#define MPFS_PMPCFG_ETH0_3   (MPFS_MPUCFG_BASE + 0x418)
-#define MPFS_PMPCFG_ETH1_0   (MPFS_MPUCFG_BASE + 0x500)
-#define MPFS_PMPCFG_ETH1_1   (MPFS_MPUCFG_BASE + 0x508)
-#define MPFS_PMPCFG_ETH1_2   (MPFS_MPUCFG_BASE + 0x510)
-#define MPFS_PMPCFG_ETH1_3   (MPFS_MPUCFG_BASE + 0x518)
 
 #if defined(CONFIG_MPFS_ETHMAC_0) && defined(CONFIG_MPFS_ETHMAC_1)
 #  warning "Using 2 MACs is not yet supported."
@@ -393,9 +389,6 @@ static void mpfs_rxreset(struct mpfs_ethmac_s *priv);
 static int  mpfs_macenable(struct mpfs_ethmac_s *priv);
 static int  mpfs_ethconfig(struct mpfs_ethmac_s *priv);
 static void mpfs_ethreset(struct mpfs_ethmac_s *priv);
-#ifdef CONFIG_NET_ICMPv6
-static void mpfs_ipv6multicast(struct sam_gmac_s *priv);
-#endif
 
 static void mpfs_interrupt_work(void *arg);
 
@@ -421,7 +414,7 @@ static void mpfs_interrupt_work(void *arg);
 static inline void mac_putreg(struct mpfs_ethmac_s *priv,
                               uint32_t offset, uint32_t val)
 {
-  uint32_t *addr = (uint32_t *)(priv->regbase + offset);
+  uintptr_t addr = (uintptr_t)(priv->regbase + offset);
 #if defined(CONFIG_DEBUG_NET) && defined(CONFIG_MPFS_ETHMAC_REGDEBUG)
   ninfo("0x%08x <- 0x%08x\n", addr, val);
 #endif
@@ -446,7 +439,7 @@ static inline void mac_putreg(struct mpfs_ethmac_s *priv,
 static inline uint32_t mac_getreg(struct mpfs_ethmac_s *priv,
                                   uint32_t offset)
 {
-  uint32_t *addr = (uint32_t *)(priv->regbase + offset);
+  uintptr_t addr = (uintptr_t)(priv->regbase + offset);
   uint32_t value = getreg32(addr);
 #if defined(CONFIG_DEBUG_NET) && defined(CONFIG_MPFS_ETHMAC_REGDEBUG)
   ninfo("0x%08x -> 0x%08x\n", addr, value);
@@ -1531,12 +1524,6 @@ static int mpfs_ifup(struct net_driver_s *dev)
   /* Set the MAC address */
 
   mpfs_macaddress(priv);
-
-#ifdef CONFIG_NET_ICMPv6
-  /* Set up IPv6 multicast address filtering */
-
-  mpfs_ipv6multicast(priv);
-#endif
 
   /* Initialize for PHY access */
 
@@ -3370,6 +3357,10 @@ static int mpfs_phyinit(struct mpfs_ethmac_s *priv)
     {
       ret = ksz9477_i2c_init(bus, KSZ9477_PORT_SGMII);
     }
+  else
+    {
+      ret = -EINVAL;
+    }
 
 #endif
 
@@ -3626,17 +3617,6 @@ int mpfs_ethinitialize(int intf)
   /* Read the next 5 bytes from the S/N */
 
   mpfs_read_dsn(&priv->dev.d_mac.ether.ether_addr_octet[1], 5);
-
-  /* MPU hack for ETH DMA if not enabled by bootloader */
-
-#ifdef CONFIG_MPFS_MPU_DMA_ENABLE
-#  ifdef CONFIG_MPFS_ETHMAC_0
-  putreg64(0x1f00000fffffffff, MPFS_PMPCFG_ETH0_0);
-#  endif
-#  ifdef CONFIG_MPFS_ETHMAC_1
-  putreg64(0x1f00000fffffffff, MPFS_PMPCFG_ETH1_0);
-#  endif
-#endif
 
   /* Allocate buffers */
 

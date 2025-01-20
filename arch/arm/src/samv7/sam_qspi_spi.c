@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/samv7/sam_qspi_spi.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -741,7 +743,7 @@ static void qspi_spi_recvblock(struct spi_dev_s *dev, void *buffer,
 
   qspi_spi_exchange(dev, NULL, buffer, nwords);
 }
-#endif  /* CONFIG_SPI_EXCHANGE */
+#endif /* CONFIG_SPI_EXCHANGE */
 
 /****************************************************************************
  * Public Functions

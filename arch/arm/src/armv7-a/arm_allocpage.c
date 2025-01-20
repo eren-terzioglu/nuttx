@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/armv7-a/arm_allocpage.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,7 +34,7 @@
 
 #include <nuttx/sched.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 
 #include <nuttx/page.h>
 
@@ -163,7 +165,7 @@ int arm_allocpage(struct tcb_s *tcb, void **vpage)
    */
 
   pgndx = g_pgndx++;
-  if (g_pgndx >= CONFIG_PAGING)
+  if (g_pgndx >= CONFIG_LEGACY_PAGING)
     {
       g_pgndx  = 0;
       g_pgwrap = true;
@@ -219,4 +221,4 @@ int arm_allocpage(struct tcb_s *tcb, void **vpage)
   return OK;
 }
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */

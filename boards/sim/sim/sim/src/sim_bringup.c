@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/sim/sim/sim/src/sim_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -47,8 +49,7 @@
 #include <nuttx/serial/uart_rpmsg.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/video/fb.h>
-#include <nuttx/video/video.h>
-#include <nuttx/timers/oneshot.h>
+#include <nuttx/video/v4l2_cap.h>
 #include <nuttx/wireless/pktradio.h>
 #include <nuttx/wireless/bluetooth/bt_null.h>
 #include <nuttx/wireless/bluetooth/bt_uart_shim.h>
@@ -59,6 +60,10 @@
 
 #ifdef CONFIG_LCD_DEV
 #include <nuttx/lcd/lcd_dev.h>
+#endif
+
+#ifdef CONFIG_VNCSERVER
+#  include <nuttx/video/vnc.h>
 #endif
 
 #if defined(CONFIG_INPUT_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
@@ -75,7 +80,7 @@
 #ifdef CONFIG_RPMSG_UART
 void rpmsg_serialinit(void)
 {
-#ifdef CONFIG_SIM_RPTUN_MASTER
+#ifdef CONFIG_SIM_RPMSG_MASTER
   uart_rpmsg_init("proxy", "proxy", 4096, false);
 #else
   uart_rpmsg_init("server", "proxy", 4096, true);
@@ -288,11 +293,19 @@ int sim_bringup(void)
 #ifdef CONFIG_VIDEO_FB
   /* Initialize and register the simulated framebuffer driver */
 
+#  ifdef CONFIG_VNCSERVER
+  ret = vnc_fb_register(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: vnc_fb_register() failed: %d\n", ret);
+    }
+#  else
   ret = fb_register(0, 0);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
     }
+#  endif
 #endif
 
 #ifdef CONFIG_SIM_CAMERA
@@ -300,10 +313,10 @@ int sim_bringup(void)
 
   sim_camera_initialize();
 
-  ret = video_initialize(CONFIG_SIM_CAMERA_DEV_PATH);
+  ret = capture_initialize(CONFIG_SIM_CAMERA_DEV_PATH);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: video_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: capture_initialize() failed: %d\n", ret);
     }
 
 #endif
@@ -463,11 +476,20 @@ int sim_bringup(void)
 #endif
 
 #ifdef CONFIG_RPTUN
-#ifdef CONFIG_SIM_RPTUN_MASTER
+#  ifdef CONFIG_SIM_RPMSG_MASTER
   sim_rptun_init("server-proxy", "proxy",
                  SIM_RPTUN_MASTER | SIM_RPTUN_NOBOOT);
-#else
+#  else
   sim_rptun_init("server-proxy", "server", SIM_RPTUN_SLAVE);
+#  endif
+#endif
+
+#ifdef CONFIG_RPMSG_VIRTIO_LITE
+#  ifdef CONFIG_SIM_RPMSG_MASTER
+  sim_rpmsg_virtio_init("server-proxy", "proxy", true);
+#  else
+  sim_rpmsg_virtio_init("server-proxy", "server", false);
+#  endif
 #endif
 
 #ifdef CONFIG_DEV_RPMSG
@@ -482,7 +504,6 @@ int sim_bringup(void)
 
 #ifdef CONFIG_RPMSGMTD
   rpmsgmtd_register("server", "/dev/rammtd", NULL);
-#endif
 #endif
 
 #ifdef CONFIG_SIM_WTGAHRS2_UARTN

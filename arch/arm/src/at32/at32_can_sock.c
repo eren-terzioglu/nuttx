@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/at32/at32_can_sock.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -38,10 +40,8 @@
 #include <nuttx/arch.h>
 
 #include <nuttx/wqueue.h>
-#include <nuttx/can.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/can.h>
-#include <netpacket/can.h>
 
 #include "arm_internal.h"
 #include "chip.h"
@@ -1149,10 +1149,10 @@ static int at32can_txavail(struct net_driver_s *dev)
 static int at32can_netdev_ioctl(struct net_driver_s *dev, int cmd,
                                  unsigned long arg)
 {
-#if 0  
+#if 0
   struct at32_can_s *priv = (struct at32_can_s *)dev->d_private;
-#endif  
-  int                 ret  = OK;
+#endif
+  int ret  = OK;
 
   switch (cmd)
     {

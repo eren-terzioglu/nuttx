@@ -1,5 +1,7 @@
 # ##############################################################################
-# arch/arm/src/qemu-rv/CMakeLists.txt
+# arch/risc-v/src/qemu-rv/CMakeLists.txt
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -30,11 +32,21 @@ list(
   qemu_rv_allocateheap.c)
 
 if(CONFIG_BUILD_KERNEL)
-  list(APPEND SRCS qemu_rv_mm_init.c qemu_rv_exception_m.S)
+  list(APPEND SRCS qemu_rv_mm_init.c)
+elseif(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS qemu_rv_userspace.c)
 endif()
 
 if(CONFIG_MM_PGALLOC)
   list(APPEND SRCS qemu_rv_pgalloc.c)
+endif()
+
+if(CONFIG_BUILD_PROTECTED)
+  list(APPEND SRCS qemu_rv_userspace.c)
+endif()
+
+if(CONFIG_RPTUN)
+  list(APPEND SRCS qemu_rv_rptun.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

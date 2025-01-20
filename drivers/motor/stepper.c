@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/motor/stepper.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -266,7 +268,7 @@ static int stepper_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           lower->status.position = (int32_t)arg;
           ret = 0;
-          stpinfo("STEPIOC_SET_CURRENT_POS: new position is %ld\n",
+          stpinfo("STEPIOC_SET_CURRENT_POS: new position is %" PRId32 "\n",
                   lower->status.position);
         }
         break;

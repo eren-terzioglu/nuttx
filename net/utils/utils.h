@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/utils/utils.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,9 +28,82 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <stdlib.h>
+
 #include <nuttx/net/net.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Some utils for port selection */
+
+#define NET_PORT_RANDOM_INIT(port) \
+  do \
+    { \
+      arc4random_buf(&(port), sizeof(port)); \
+      (port) = (port) % (CONFIG_NET_DEFAULT_MAX_PORT - \
+                         CONFIG_NET_DEFAULT_MIN_PORT + 1); \
+      (port) += CONFIG_NET_DEFAULT_MIN_PORT; \
+    } while (0)
+
+/* Get next net port number, and make sure that the port number is within
+ * range.  In host byte order.
+ */
+
+#define NET_PORT_NEXT_H(hport) \
+  do \
+    { \
+      ++(hport); \
+      if ((hport) > CONFIG_NET_DEFAULT_MAX_PORT || \
+          (hport) < CONFIG_NET_DEFAULT_MIN_PORT) \
+        { \
+          (hport) = CONFIG_NET_DEFAULT_MIN_PORT; \
+        } \
+    } while (0)
+
+/* Get next net port number, and make sure that the port number is within
+ * range.  In both network & host byte order.
+ */
+
+#define NET_PORT_NEXT_NH(nport, hport) \
+  do \
+    { \
+      NET_PORT_NEXT_H(hport); \
+      (nport) = HTONS(hport); \
+    } while (0)
+
+/* Network buffer pool related macros, in which:
+ *   pool:     The name of the buffer pool
+ *   nodesize: The size of each node in the pool
+ *   prealloc: The number of pre-allocated buffers
+ *   dynalloc: The number per dynamic allocations
+ *   maxalloc: The number of max allocations, 0 means no limit
+ */
+
+#define NET_BUFPOOL_MAX(prealloc, dynalloc, maxalloc) \
+  (dynalloc) <= 0 ? (prealloc) : ((maxalloc) > 0 ? (maxalloc) : INT16_MAX)
+
+#define NET_BUFPOOL_DECLARE(pool, nodesize, prealloc, dynalloc, maxalloc) \
+  static char pool##_buffer[prealloc][nodesize]; \
+  static struct net_bufpool_s pool = \
+    { \
+      pool##_buffer[0], \
+      prealloc, \
+      dynalloc, \
+      -(int)(nodesize), \
+      SEM_INITIALIZER(NET_BUFPOOL_MAX(prealloc, dynalloc, maxalloc)), \
+      { NULL, NULL } \
+    };
+
+#define NET_BUFPOOL_TIMEDALLOC(p,t) net_bufpool_timedalloc(&p, t)
+#define NET_BUFPOOL_TRYALLOC(p)     net_bufpool_timedalloc(&p, 0)
+#define NET_BUFPOOL_ALLOC(p)        net_bufpool_timedalloc(&p, UINT_MAX)
+#define NET_BUFPOOL_FREE(p,n)       net_bufpool_free(&p, n)
+#define NET_BUFPOOL_TEST(p)         net_bufpool_test(&p)
 
 /****************************************************************************
  * Public Types
@@ -41,6 +116,22 @@ enum tv2ds_remainder_e
   TV2DS_TRUNC = 0, /* Truncate microsecond remainder */
   TV2DS_ROUND,     /* Round to the nearest full decisecond */
   TV2DS_CEIL       /* Force to next larger full decisecond */
+};
+
+/* This structure is used to manage a pool of network buffers */
+
+struct net_bufpool_s
+{
+  /* Allocation configuration */
+
+  FAR char  *pool;     /* The beginning of the pre-allocated buffer pool */
+  int        prealloc; /* The number of pre-allocated buffers */
+  int        dynalloc; /* The number per dynamic allocations */
+  int        nodesize; /* The size of each node in the pool */
+
+  sem_t      sem;      /* The semaphore for waiting for free buffers */
+
+  sq_queue_t freebuffers;
 };
 
 /****************************************************************************
@@ -145,21 +236,6 @@ unsigned int net_timeval2dsec(FAR struct timeval *tv,
                               enum tv2ds_remainder_e remainder);
 
 /****************************************************************************
- * Name: net_getrandom
- *
- * Description:
- *   Fill a buffer of arbitrary length with randomness. This function is
- *   guaranteed to be success.
- *
- * Input Parameters:
- *   bytes  - Buffer for returned random bytes
- *   nbytes - Number of bytes requested.
- *
- ****************************************************************************/
-
-void net_getrandom(FAR void *bytes, size_t nbytes);
-
-/****************************************************************************
  * Name: net_ipv4_mask2pref
  *
  * Description:
@@ -255,6 +331,26 @@ void net_ipv6_pref2mask(net_ipv6addr_t mask, uint8_t preflen);
 #endif
 
 /****************************************************************************
+ * Name: net_ipv6_payload
+ *
+ * Description:
+ *   Given a pointer to the IPv6 header, this function will return a pointer
+ *   to the beginning of the L4 payload.
+ *
+ * Input Parameters:
+ *   ipv6  - A pointer to the IPv6 header.
+ *   proto - The location to return the protocol number in the IPv6 header.
+ *
+ * Returned Value:
+ *   A pointer to the beginning of the payload.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_NET_IPv6
+FAR void *net_ipv6_payload(FAR struct ipv6_hdr_s *ipv6, FAR uint8_t *proto);
+#endif
+
+/****************************************************************************
  * Name: net_iob_concat
  *
  * Description:
@@ -270,6 +366,53 @@ void net_ipv6_pref2mask(net_ipv6addr_t mask, uint8_t preflen);
 #ifdef CONFIG_MM_IOB
 uint16_t net_iob_concat(FAR struct iob_s **iob1, FAR struct iob_s **iob2);
 #endif
+
+/****************************************************************************
+ * Name: net_bufpool_timedalloc
+ *
+ * Description:
+ *   Allocate a buffer from the pool.  If no buffer is available, then wait
+ *   for the specified timeout.
+ *
+ * Input Parameters:
+ *   pool    - The pool from which to allocate the buffer
+ *   timeout - The maximum time to wait for a buffer to become available.
+ *
+ * Returned Value:
+ *   A reference to the allocated buffer, which is guaranteed to be zeroed.
+ *   NULL is returned on a timeout.
+ *
+ ****************************************************************************/
+
+FAR void *net_bufpool_timedalloc(FAR struct net_bufpool_s *pool,
+                                 unsigned int timeout);
+
+/****************************************************************************
+ * Name: net_bufpool_free
+ *
+ * Description:
+ *   Free a buffer from the pool.
+ *
+ * Input Parameters:
+ *   pool - The pool from which to allocate the buffer
+ *   node - The buffer to be freed
+ *
+ ****************************************************************************/
+
+void net_bufpool_free(FAR struct net_bufpool_s *pool, FAR void *node);
+
+/****************************************************************************
+ * Name: net_bufpool_test
+ *
+ * Description:
+ *   Check if there is room in the buffer pool.  Does not reserve any space.
+ *
+ * Assumptions:
+ *   None.
+ *
+ ****************************************************************************/
+
+int net_bufpool_test(FAR struct net_bufpool_s *pool);
 
 /****************************************************************************
  * Name: net_chksum_adjust

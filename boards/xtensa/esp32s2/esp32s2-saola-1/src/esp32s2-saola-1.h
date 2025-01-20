@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32s2/esp32s2-saola-1/src/esp32s2-saola-1.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -51,6 +53,19 @@
 #define ONESHOT_TIMER         TIMER0
 #define ONESHOT_RESOLUTION_US 1
 
+/* RMT gpio */
+
+#define RMT_RXCHANNEL       1
+#define RMT_TXCHANNEL       0
+
+#ifdef CONFIG_RMT_LOOP_TEST_MODE
+#  define RMT_INPUT_PIN       0
+#  define RMT_OUTPUT_PIN      0
+#else
+#  define RMT_INPUT_PIN       2
+#  define RMT_OUTPUT_PIN      18
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -89,7 +104,7 @@ int esp32s2_bringup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ESP32S2_SPIFLASH
+#ifdef CONFIG_ESPRESSIF_SPIFLASH
 int board_spiflash_init(void);
 #endif
 

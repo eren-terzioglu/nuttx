@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/stm32f7/stm32_pwm.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -4006,6 +4008,13 @@ static int pwm_stop(struct pwm_lowerhalf_s *dev)
   pwm_timer_enable(dev, false);
   outputs = pwm_outputs_from_channels(priv);
   ret = pwm_outputs_enable(dev, outputs, false);
+
+  /* Clear all channels */
+
+  pwm_putreg(priv, STM32_GTIM_CCR1_OFFSET, 0);
+  pwm_putreg(priv, STM32_GTIM_CCR2_OFFSET, 0);
+  pwm_putreg(priv, STM32_GTIM_CCR3_OFFSET, 0);
+  pwm_putreg(priv, STM32_GTIM_CCR4_OFFSET, 0);
 
   leave_critical_section(flags);
 

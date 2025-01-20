@@ -1,6 +1,8 @@
 /****************************************************************************
  * tools/configure.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -1121,13 +1123,19 @@ static void check_configuration(void)
           debug("check_configuration: Checking %s\n", g_buffer);
           if (!verify_file(g_buffer))
             {
-              fprintf(stderr, "ERROR: No Make.defs file in %s\n",
-                      g_configpath);
-              fprintf(stderr, "       No Make.defs file in %s\n",
-                      g_scriptspath);
-              fprintf(stderr, "Run tools/configure -L"
-                              " to list available configurations.\n");
-              exit(EXIT_FAILURE);
+              /* Let’s check if there is a script in the common directory */
+
+              snprintf(g_buffer, BUFFER_SIZE,
+                       "%s%c..%c..%c..%ccommon%cscripts%cMake.defs",
+                       g_configpath, g_delim, g_delim, g_delim, g_delim,
+                       g_delim, g_delim);
+              if (!verify_file(g_buffer))
+                {
+                  fprintf(stderr, "ERROR: No Make.defs file found\n");
+                  fprintf(stderr, "Run tools/configure -L"
+                                  " to list available configurations.\n");
+                  exit(EXIT_FAILURE);
+                }
             }
         }
       else

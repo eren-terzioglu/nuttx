@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32/esp32-ethernet-kit/src/esp32_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,13 +29,9 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
 
 #include <errno.h>
 #include <nuttx/fs/fs.h>

@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32/esp32-lyrat/src/esp32_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,11 +33,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
-
-#include <syslog.h>
 #include <errno.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
@@ -368,7 +366,7 @@ int esp32_bringup(void)
     }
 #endif /* CONFIG_AUDIO_ES8388 */
 
-#endif  /* CONFIG_ESP32_I2S0 */
+#endif /* CONFIG_ESP32_I2S0 */
 
 #ifdef CONFIG_ESP32_I2S1
 
@@ -381,7 +379,7 @@ int esp32_bringup(void)
              CONFIG_ESP32_I2S0, ret);
     }
 
-#endif  /* CONFIG_ESP32_I2S1 */
+#endif /* CONFIG_ESP32_I2S1 */
 
 #endif /* CONFIG_ESP32_I2S */
 

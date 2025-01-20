@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/stm32/nucleo-l152re/src/stm32_ili93418b.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -204,8 +206,7 @@ static inline void write_byte(uint8_t data)
 {
   LCD_RD_SET;
 
-  /**
-   * This is simple to understand
+  /* This is simple to understand
    *
    * stm32_gpiowrite(GPIO_LCD_D0, GET_BIT(data, BIT0));
    * stm32_gpiowrite(GPIO_LCD_D1, GET_BIT(data, BIT1));

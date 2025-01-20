@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/imxrt/imxrt_tickless.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -96,7 +98,7 @@
  * PRECLK_CLOCK_ROOT = IPG_CLOCK_ROOT / IMXRT_PERCLK_PODF_DIVIDER
  * where IPG_CLOCK_ROOT = 150 MHz and IMXRT_PERCLK_PODF_DIVIDER = 9
  *
- * Those clocks are set in imxrt_clockconfig.c, but makros are defined in
+ * Those clocks are set in imxrt_clockconfig, but makros are defined in
  * board level section (file board.h) so clock settings may actually vary
  * when using different boards.
  *

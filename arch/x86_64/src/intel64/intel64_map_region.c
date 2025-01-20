@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/x86_64/src/intel64/intel64_map_region.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -26,8 +28,94 @@
 
 #include <debug.h>
 #include <nuttx/irq.h>
+#include <nuttx/pgalloc.h>
 
 #include "x86_64_internal.h"
+#include "x86_64_mmu.h"
+#include "pgalloc.h"
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_map_region_higmem
+ *
+ * Description:
+ *   Map a memory region as 1:1 by MMU for high memory region (>4Gb)
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_MM_PGALLOC
+static int up_map_region_highmem(void *base, size_t size, int flags)
+{
+  uintptr_t bb;
+  int       ptlevel;
+  uintptr_t ptprev;
+  uintptr_t paddr;
+  uintptr_t vaddr;
+  size_t    nmapped;
+  int       i;
+
+  /* Round to page boundary */
+
+  bb = (uintptr_t)base & ~(PAGE_SIZE - 1);
+
+  /* Increase size if the base address is rounded off */
+
+  size += (uintptr_t)base - bb;
+
+  /* Map 1:1 */
+
+  vaddr   = bb;
+  nmapped = 0;
+
+  while (nmapped < size)
+    {
+      /* Start from PTL4 */
+
+      ptprev = x86_64_pgvaddr(get_pml4());
+
+      for (ptlevel = 0; ptlevel < X86_MMU_PT_LEVELS - 1; ptlevel++)
+        {
+          paddr = mmu_pte_to_paddr(mmu_ln_getentry(ptlevel, ptprev, vaddr));
+          if (!paddr)
+            {
+              /* Nothing yet, allocate one page for final level page table */
+
+              paddr = mm_pgalloc(1);
+              if (!paddr)
+                {
+                  return -ENOMEM;
+                }
+
+              /* Map the page table to the prior level */
+
+              mmu_ln_setentry(ptlevel, ptprev, paddr, vaddr, X86_PAGE_WR);
+
+              /* This is then used to map the final level */
+
+              x86_64_pgwipe(paddr);
+            }
+
+          ptprev = x86_64_pgvaddr(paddr);
+        }
+
+      /* Then map the virtual address to the physical address */
+
+      for (i = X86_MMU_VADDR_INDEX(vaddr, ptlevel);
+           i < X86_MMU_ENTRIES_PER_PGT && nmapped < size;
+           i++)
+        {
+          mmu_ln_setentry(ptlevel, ptprev, bb + nmapped, vaddr, flags);
+          nmapped += MM_PGSIZE;
+          vaddr   += MM_PGSIZE;
+        }
+    }
+
+  return 0;
+}
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -41,7 +129,7 @@
  *
  ****************************************************************************/
 
-int up_map_region(void *base, int size, int flags)
+int up_map_region(void *base, size_t size, int flags)
 {
   uint64_t bb;
   uint64_t num_of_pages;
@@ -60,7 +148,13 @@ int up_map_region(void *base, int size, int flags)
 
   if (bb > 0xffffffff)
     {
-      return -1;  /* Only < 4GB can be mapped */
+#ifdef CONFIG_MM_PGALLOC
+      return up_map_region_highmem(base, size, flags);
+#else
+      /* More than 4GB can't be mapped without CONFIG_MM_PGALLOC */
+
+      PANIC();
+#endif
     }
 
   curr = bb;
@@ -68,7 +162,7 @@ int up_map_region(void *base, int size, int flags)
     {
       entry = (curr >> 12) & 0x7ffffff;
 
-      pt[entry] = curr | flags;
+      g_pt[entry] = curr | flags;
       curr += PAGE_SIZE;
     }
 

@@ -1,6 +1,8 @@
 ############################################################################
 # boards/arm/stm32/b-g474e-dpow1/src/Make.defs
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -31,6 +33,10 @@ endif
 
 ifeq ($(CONFIG_BOARDCTL),y)
 CSRCS += stm32_appinit.c
+endif
+
+ifeq ($(CONFIG_DRIVERS_SMPS),y)
+CSRCS += stm32_smps.c
 endif
 
 DEPPATH += --dep-path board

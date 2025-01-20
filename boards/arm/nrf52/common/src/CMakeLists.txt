@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/nrf52/common/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -34,6 +36,18 @@ if(CONFIG_ARCH_BOARD_COMMON)
 
   if(CONFIG_SENSORS_LSM9DS1)
     list(APPEND SRCS nrf52_lsm9ds1.c)
+  endif()
+
+  if(CONFIG_BOARDCTL_RESET)
+    list(APPEND SRCS nrf52_reset.c)
+  endif()
+
+  if(CONFIG_NRF52_RADIO_IEEE802154)
+    list(APPEND SRCS nrf52_ieee802154.c)
+  endif()
+
+  if(CONFIG_IEEE802154_MRF24J40)
+    list(APPEND SRCS nrf52_mrf24j40.c)
   endif()
 
   target_sources(board PRIVATE ${SRCS})

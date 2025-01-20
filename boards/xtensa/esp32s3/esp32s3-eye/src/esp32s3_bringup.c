@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32s3/esp32s3-eye/src/esp32s3_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -31,9 +33,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syslog.h>
 #include <debug.h>
-#include <stdio.h>
 
 #include <errno.h>
 #include <nuttx/fs/fs.h>
@@ -77,6 +77,10 @@
 #ifdef CONFIG_LCD_DEV
 #  include <nuttx/board.h>
 #  include <nuttx/lcd/lcd_dev.h>
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+#include "esp32s3_board_sdmmc.h"
 #endif
 
 #include "esp32s3-eye.h"
@@ -241,6 +245,14 @@ int esp32s3_bringup(void)
     }
 #endif
 
+#endif
+
+#ifdef CONFIG_ESP32S3_SDMMC
+  ret = board_sdmmc_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SDMMC: %d\n", ret);
+    }
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

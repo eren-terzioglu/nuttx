@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/stm32/stm32f401rc-rs485/src/stm32_buttons.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -46,7 +48,7 @@
 
 static const uint32_t g_buttons[NUM_BUTTONS] =
 {
-  GPIO_BTN_SW3, GPIO_BTN_SW4, GPIO_BTN_SW5, GPIO_BTN_SW6
+  GPIO_BTN_SW3, GPIO_BTN_SW4, GPIO_BTN_SW5
 };
 
 /****************************************************************************

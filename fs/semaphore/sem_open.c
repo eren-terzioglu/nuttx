@@ -1,6 +1,8 @@
 /****************************************************************************
  * fs/semaphore/sem_open.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -40,6 +42,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "notify/notify.h"
 #include "semaphore/semaphore.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
@@ -49,7 +52,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sem_open
+ * Name: nxsem_open
  *
  * Description:
  *   This function establishes a connection between named semaphores and a
@@ -65,7 +68,8 @@
  *   calls to sem_unlink()).
  *
  * Input Parameters:
- *   name  - Semaphore name
+ *   sem    - Location to return the semaphore reference.
+ *   name   - Semaphore name.
  *   oflags - Semaphore creation options.  This may either or both of the
  *     following bit settings.
  *     oflags = 0:  Connect to the semaphore only if it already exists.
@@ -81,42 +85,21 @@
  *        SEM_VALUE_MAX.
  *
  * Returned Value:
- *   A pointer to sem_t or SEM_FAILED if unsuccessful.
+ *   0 (OK), or negated errno if unsuccessful.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
+int nxsem_open(FAR sem_t **sem, FAR const char *name, int oflags, ...)
 {
   FAR struct inode *inode;
   FAR struct nsem_inode_s *nsem;
-  FAR sem_t *sem = (FAR sem_t *)ERROR;
   struct inode_search_s desc;
   char fullpath[MAX_SEMPATH];
   mode_t mode;
   unsigned value;
-  int errcode;
   int ret;
-
-  /* Make sure that a non-NULL name is supplied */
-
-  DEBUGASSERT(name != NULL);
-
-  if (name[0] == '/')
-    {
-      if (strlen(name) >= PATH_MAX)
-        {
-          set_errno(ENAMETOOLONG);
-          return SEM_FAILED;
-        }
-
-      if (strlen(strrchr(name, '/') + 1) >= NAME_MAX)
-        {
-          set_errno(ENAMETOOLONG);
-          return SEM_FAILED;
-        }
-    }
 
   /* Get the full path to the semaphore */
 
@@ -141,7 +124,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
       if (!INODE_IS_NAMEDSEM(inode))
         {
-          errcode = ENXIO;
+          ret = -ENXIO;
           goto errout_with_inode;
         }
 
@@ -151,7 +134,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
       if ((oflags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL))
         {
-          errcode = EEXIST;
+          ret = -EEXIST;
           goto errout_with_inode;
         }
 
@@ -159,7 +142,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
        * count on the inode.
        */
 
-      sem = &inode->u.i_nsem->ns_sem;
+      *sem = &inode->u.i_nsem->ns_sem;
     }
   else
     {
@@ -171,8 +154,8 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
         {
           /* The semaphore does not exist and O_CREAT is not set */
 
-          errcode = ENOENT;
-          goto errout_with_lock;
+          ret = -ENOENT;
+          goto errout_with_search;
         }
 
       /* Create the semaphore.  First we have to extract the additional
@@ -189,28 +172,21 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
       if (value > SEM_VALUE_MAX)
         {
-          errcode = EINVAL;
-          goto errout_with_lock;
+          ret = -EINVAL;
+          goto errout_with_search;
         }
 
       /* Create an inode in the pseudo-filesystem at this path.  The new
        * inode will be created with a reference count of zero.
        */
 
-      ret = inode_lock();
-      if (ret < 0)
-        {
-          errcode = -ret;
-          goto errout_with_lock;
-        }
-
+      inode_lock();
       ret = inode_reserve(fullpath, mode, &inode);
       inode_unlock();
 
       if (ret < 0)
         {
-          errcode = -ret;
-          goto errout_with_lock;
+          goto errout_with_search;
         }
 
       /* Allocate the semaphore structure (using the appropriate allocator
@@ -220,7 +196,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
       nsem = group_malloc(NULL, sizeof(struct nsem_inode_s));
       if (!nsem)
         {
-          errcode = ENOMEM;
+          ret = -ENOMEM;
           goto errout_with_inode;
         }
 
@@ -232,7 +208,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
       /* Initialize the inode */
 
       INODE_SET_NAMEDSEM(inode);
-      inode->i_crefs = 1;
+      atomic_fetch_add(&inode->i_crefs, 1);
 
       /* Initialize the semaphore */
 
@@ -240,19 +216,21 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
       /* Return a reference to the semaphore */
 
-      sem = &nsem->ns_sem;
+      *sem = &nsem->ns_sem;
     }
 
   RELEASE_SEARCH(&desc);
-  return sem;
+#ifdef CONFIG_FS_NOTIFY
+  notify_open(fullpath, oflags);
+#endif
+  return OK;
 
 errout_with_inode:
   inode_release(inode);
 
-errout_with_lock:
+errout_with_search:
   RELEASE_SEARCH(&desc);
-  set_errno(errcode);
-  return SEM_FAILED;
+  return ret;
 }
 
 #endif /* CONFIG_FS_NAMED_SEMAPHORES */

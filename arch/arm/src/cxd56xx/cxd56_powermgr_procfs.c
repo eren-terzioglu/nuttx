@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/cxd56xx/cxd56_powermgr_procfs.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -114,6 +116,7 @@ const struct procfs_operations cxd56_powermgr_procfs_operations =
   cxd56_powermgr_procfs_close,     /* close */
   cxd56_powermgr_procfs_read,      /* read */
   NULL,                            /* write */
+  NULL,                            /* poll */
   cxd56_powermgr_procfs_dup,       /* dup */
   cxd56_powermgr_procfs_opendir,   /* opendir */
   cxd56_powermgr_procfs_closedir,  /* closedir */

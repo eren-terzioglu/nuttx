@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/bl602/bl602_os_hal.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -48,6 +50,7 @@
 #include <syslog.h>
 
 #include <nuttx/config.h>
+#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/mqueue.h>
@@ -933,7 +936,7 @@ void *bl_os_timer_create(void *func, void *argv)
   struct timer_adpt *timer = kmm_malloc(sizeof(struct timer_adpt));
   if (!timer)
     {
-      assert(0);
+      ASSERT(0);
     }
 
   memset((void *)timer, 0, sizeof(struct timer_adpt));
@@ -989,7 +992,6 @@ int bl_os_timer_start_once(void *timerid, long t_sec, long t_nsec)
 {
   struct timer_adpt *timer;
   struct timespec reltime;
-  int32_t tick;
 
   timer = (struct timer_adpt *)timerid;
 
@@ -1001,10 +1003,8 @@ int bl_os_timer_start_once(void *timerid, long t_sec, long t_nsec)
   reltime.tv_nsec = t_nsec;
   reltime.tv_sec = t_sec;
 
-  clock_time2ticks(&reltime, &tick);
-
   timer->mode = BL_OS_TIEMR_ONCE;
-  timer->delay = tick;
+  timer->delay = clock_time2ticks(&reltime);
 
   return wd_start(&timer->wdog,
                   timer->delay,
@@ -1027,7 +1027,6 @@ int bl_os_timer_start_periodic(void *timerid, long t_sec, long t_nsec)
 {
   struct timer_adpt *timer;
   struct timespec reltime;
-  int32_t tick;
 
   timer = (struct timer_adpt *)timerid;
 
@@ -1039,10 +1038,8 @@ int bl_os_timer_start_periodic(void *timerid, long t_sec, long t_nsec)
   reltime.tv_nsec = t_nsec;
   reltime.tv_sec = t_sec;
 
-  clock_time2ticks(&reltime, &tick);
-
   timer->mode = BL_OS_TIEMR_CYCLE;
-  timer->delay = tick;
+  timer->delay = clock_time2ticks(&reltime);
 
   return wd_start(&timer->wdog,
                   timer->delay,
@@ -1066,7 +1063,7 @@ void *bl_os_workqueue_create(void)
   struct work_s *work = kmm_calloc(1, sizeof(struct work_s));
   if (!work)
     {
-      assert(0);
+      ASSERT(0);
     }
 
   return (void *)work;

@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/stream/lib_lowoutstream.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,26 @@
 #include "libc.h"
 
 /****************************************************************************
+ * Private Functions Prototypes
+ ****************************************************************************/
+
+static void lowoutstream_putc(FAR struct lib_outstream_s *self, int ch);
+static ssize_t lowoutstream_puts(FAR struct lib_outstream_s *self,
+                                 FAR const void *buf, size_t len);
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+struct lib_outstream_s g_lowoutstream =
+{
+  0,
+  lowoutstream_putc,
+  lowoutstream_puts,
+  lib_noflush
+};
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -45,7 +67,9 @@ static void lowoutstream_putc(FAR struct lib_outstream_s *self, int ch)
 {
   DEBUGASSERT(self);
 
-  if (up_putc(ch) != EOF)
+  up_putc(ch);
+
+  if (ch != EOF)
     {
       self->nput++;
     }
@@ -55,8 +79,8 @@ static void lowoutstream_putc(FAR struct lib_outstream_s *self, int ch)
  * Name: lowoutstream_puts
  ****************************************************************************/
 
-static int lowoutstream_puts(FAR struct lib_outstream_s *self,
-                             FAR const void *buf, int len)
+static ssize_t lowoutstream_puts(FAR struct lib_outstream_s *self,
+                                 FAR const void *buf, size_t len)
 {
   DEBUGASSERT(self);
 

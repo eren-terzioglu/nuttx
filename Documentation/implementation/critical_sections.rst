@@ -43,7 +43,7 @@ OS Interfaces
 -------------
 
 Before we talk about SMP Critical Sections let's first review the internal OS
-interfaces avaiable and what they do in the single CPU case:
+interfaces available and what they do in the single CPU case:
 
 * ``up_irq_save()`` (and its companion, ``up_irq_restore()``). These simple
   interfaces just enable and disable interrupts globally. This is the simplest
@@ -208,11 +208,70 @@ a Critical Section Monitor. This is internal instrumentation that records the
 time that a task holds a critical section. It also records the amount of time
 that interrupts are disabled globally. The Critical Section Monitor then retains
 the maximum time that the critical section is in place, both per-task and globally.
+We also extend the critical section monitor to do task sched cost statistics, which
+can high effectively do cpuload statistic. In order to save not necessary cost when
+you only focus on specific feature, we isolate the crtimon features to difference
+configurations. Allow you only open some of the features to minimum the side effect
+of the performance etc.
 
 The Critical Section Monitor is enabled with the following setting in the
-configuration::
+configurations::
 
   CONFIG_SCHED_CRITMONITOR=y
+
+Enable sched critmon globally, all other features need this configuration as a prefix.
+
+**Thread executing**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD=0
+
+* Default 0 to enable executing time statistic, and make it a source to support cpuload.
+* > 0 to also do alert log when executing time above the configuration ticks.
+* -1 to disable thread executing time statistic feature.
+
+This method is **recommend** as a cpuload backend if you don't have more requirements
+in critmon. When disabled all other statistics in critmon, this method is a high
+efficiency way do cpu load statistic. As we did not add hooks to critical sections 
+and preemption operations. Only have instructions when scheduler triggers context switch.
+
+**Workq executing**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE=-1
+
+* Default -1 to disable workq queue max execution time
+* > 0 to do alert log when workq executing time above the configuration ticks.
+
+**Preemption disabled time**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION=-1
+
+* Default -1 to disable preemption disabled time statistic.
+* >= 0 to enable preemption disabled time statistic, data will be in critmon procfs.
+* > 0 to also do alert log when preemption disabled time above the configuration ticks.
+
+**Critical section entered time**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION=-1
+
+* Default -1 to disable critical section entered time statistic.
+* >= 0 to enable critical section entered time statistic, data will be in critmon procfs.
+* > 0 to also do alert log when critical section entered time above the configuration ticks.
+
+**Irq executing time**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ=-1
+
+* Default -1 to disable irq executing time statistic.
+* >= 0 to enable irq executing time statistic, data will be in critmon procfs.
+* > 0 to also do alert log when irq executing time above the configuration ticks.
+
+**Wdog executing time**::
+
+  CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG=-1
+
+* Default -1 to disable wdog executing time statistic.
+* >= 0 to enable wdog executing time statistic, data will be in critmon procfs.
+* > 0 to also do alert log when wdog executing time above the configuration ticks.
 
 **Perf Timers interface**
 
@@ -272,7 +331,7 @@ This file cat be read from NSH like:
    nsh> cat /proc/1/critmon
    0.000009610,0.000001165
 
-The form of the output from the ``/proc/critmon`` file is simlar::
+The form of the output from the ``/proc/critmon`` file is similar::
 
   X,X.XXXXXXXXX,X.XXXXXXXXX
 
@@ -295,7 +354,7 @@ file was read.
 ``apps/system/critmon``
 -----------------------
 
-Also available is a application daemon at ``apps/sysem/critmon``. This daemon
+Also available is a application daemon at ``apps/system/critmon``. This daemon
 periodically reads the ProcFS files described above and dumps the output to
 stdout. This daemon is enabled with:
 
@@ -408,7 +467,7 @@ You have these options:
    or code when they could be re-designed to use critical sections over shorter code
    sequences.
 
-#. In some cases, use of critical sections or disabling of pre-emption could replaced
+#. In some cases, use of critical sections or disabling of pre-emption could be replaced
    with a locking semaphore. The scope of the locking effect for the use of such locks
    is not global but is limited only to tasks that share the same resource. Critical
    sections should correctly be used only to protect resources that are shared between

@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/sys/syscall_lookup.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,6 +36,7 @@ SYSCALL_LOOKUP(prctl,                      2)
   SYSCALL_LOOKUP(getppid,                  0)
 #endif
 
+SYSCALL_LOOKUP(sched_getcpu,               0)
 SYSCALL_LOOKUP(sched_getparam,             2)
 SYSCALL_LOOKUP(sched_getscheduler,         1)
 SYSCALL_LOOKUP(sched_lock,                 0)
@@ -51,7 +54,6 @@ SYSCALL_LOOKUP(nxsched_get_stackinfo,      2)
 
 #ifdef CONFIG_SMP
   SYSCALL_LOOKUP(sched_getaffinity,        3)
-  SYSCALL_LOOKUP(sched_getcpu,             0)
   SYSCALL_LOOKUP(sched_setaffinity,        3)
 #endif
 
@@ -75,25 +77,28 @@ SYSCALL_LOOKUP(sethostname,                2)
 
 /* Semaphores */
 
+SYSCALL_LOOKUP(nxsem_destroy,              1)
+SYSCALL_LOOKUP(nxsem_post,                 1)
+SYSCALL_LOOKUP(nxsem_clockwait,            3)
+SYSCALL_LOOKUP(nxsem_timedwait,            2)
+SYSCALL_LOOKUP(nxsem_trywait,              1)
 SYSCALL_LOOKUP(nxsem_wait,                 1)
 
-SYSCALL_LOOKUP(sem_destroy,                1)
-SYSCALL_LOOKUP(sem_post,                   1)
-SYSCALL_LOOKUP(sem_clockwait,              3)
-SYSCALL_LOOKUP(sem_timedwait,              2)
-SYSCALL_LOOKUP(sem_trywait,                1)
-SYSCALL_LOOKUP(sem_wait,                   1)
-
 #ifdef CONFIG_PRIORITY_INHERITANCE
-  SYSCALL_LOOKUP(sem_setprotocol,          2)
+  SYSCALL_LOOKUP(nxsem_set_protocol,       2)
+#endif
+
+#ifdef CONFIG_PRIORITY_PROTECT
+  SYSCALL_LOOKUP(nxsem_setprioceiling,     3)
+  SYSCALL_LOOKUP(nxsem_getprioceiling,     2)
 #endif
 
 /* Named semaphores */
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
-  SYSCALL_LOOKUP(sem_open,                 4)
-  SYSCALL_LOOKUP(sem_close,                1)
-  SYSCALL_LOOKUP(sem_unlink,               1)
+  SYSCALL_LOOKUP(nxsem_open,               5)
+  SYSCALL_LOOKUP(nxsem_close,              1)
+  SYSCALL_LOOKUP(nxsem_unlink,             1)
 #endif
 
 #ifndef CONFIG_BUILD_KERNEL
@@ -183,7 +188,9 @@ SYSCALL_LOOKUP(clock_settime,              2)
 
 /* System logging */
 
+#ifdef CONFIG_SYSLOG
 SYSCALL_LOOKUP(nx_vsyslog,                 3)
+#endif
 
 /* The following are defined if either file or socket descriptor are
  * enabled.
@@ -193,6 +200,8 @@ SYSCALL_LOOKUP(close,                      1)
 SYSCALL_LOOKUP(ioctl,                      3)
 SYSCALL_LOOKUP(read,                       3)
 SYSCALL_LOOKUP(write,                      3)
+SYSCALL_LOOKUP(readv,                      3)
+SYSCALL_LOOKUP(writev,                     3)
 SYSCALL_LOOKUP(pread,                      4)
 SYSCALL_LOOKUP(pwrite,                     4)
 #ifdef CONFIG_FS_AIO
@@ -250,6 +259,7 @@ SYSCALL_LOOKUP(fchown,                     3)
 SYSCALL_LOOKUP(utimens,                    2)
 SYSCALL_LOOKUP(lutimens,                   2)
 SYSCALL_LOOKUP(futimens,                   2)
+SYSCALL_LOOKUP(msync,                      3)
 SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
@@ -288,10 +298,18 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(shm_unlink,               1)
 #endif
 
+/* The following are defined if the file system notify is enabled */
+
+#ifdef CONFIG_FS_NOTIFY
+  SYSCALL_LOOKUP(inotify_add_watch,        3)
+  SYSCALL_LOOKUP(inotify_init,             0)
+  SYSCALL_LOOKUP(inotify_init1,            1)
+  SYSCALL_LOOKUP(inotify_rm_watch,         2)
+#endif
+
 /* The following are defined if pthreads are enabled */
 
 #ifndef CONFIG_DISABLE_PTHREAD
-  SYSCALL_LOOKUP(pthread_barrier_wait,     1)
   SYSCALL_LOOKUP(pthread_cancel,           1)
   SYSCALL_LOOKUP(pthread_cond_broadcast,   1)
   SYSCALL_LOOKUP(pthread_cond_signal,      1)
@@ -367,15 +385,6 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(socketpair,               4)
 #endif
 
-/* The following is defined only if entropy pool random number generator
- * is enabled.
- */
-
-#ifdef CONFIG_CRYPTO_RANDOM_POOL
-  SYSCALL_LOOKUP(arc4random_buf,           2)
-#endif
-
-SYSCALL_LOOKUP(getrandom,                  3)
 SYSCALL_LOOKUP(nanosleep,                  2)
 
 /* I/O event notification facility */

@@ -178,8 +178,9 @@ static bool g_non_iram_int_disabled_flag[CONFIG_SMP_NCPUS];
  */
 
 static uint32_t g_cpu0_freeints = ESP32_CPUINT_PERIPHSET &
-                                  (~ESP32_WIFI_RESERVE_INT &
-                                   ~ESP32_BLE_RESERVE_INT);
+                                  ~(ESP32_WIFI_RESERVE_INT |
+                                    ESP32_BLE_RESERVE_INT);
+
 #ifdef CONFIG_SMP
 static uint32_t g_cpu1_freeints = ESP32_CPUINT_PERIPHSET;
 #endif
@@ -392,8 +393,7 @@ static int esp32_alloc_cpuint(int cpu, int priority, int type)
 
   DEBUGASSERT(priority >= ESP32_MIN_PRIORITY &&
               priority <= ESP32_MAX_PRIORITY);
-  DEBUGASSERT(type == ESP32_CPUINT_LEVEL ||
-              type == ESP32_CPUINT_EDGE);
+  DEBUGASSERT(type & ESP32_CPUINT_TRIGGER_MASK);
 
   if ((type & (ESP32_CPUINT_LEVEL | ESP32_CPUINT_EDGE)) == 0)
     {
@@ -447,7 +447,7 @@ static void esp32_free_cpuint(int cpuint)
   bitmask = 1ul << cpuint;
 
 #ifdef CONFIG_SMP
-  if (up_cpu_index() != 0)
+  if (this_cpu() != 0)
     {
       freeints = &g_cpu1_freeints;
     }
@@ -517,6 +517,8 @@ void up_irqinitialize(void)
   /* Hard code special cases. */
 
   g_irqmap[XTENSA_IRQ_TIMER0] = IRQ_MKMAP(0, ESP32_CPUINT_TIMER0);
+  g_irqmap[XTENSA_IRQ_SWINT] = IRQ_MKMAP(0, ESP32_CPUINT_SOFTWARE1);
+  g_irqmap[XTENSA_IRQ_SWINT] = IRQ_MKMAP(1, ESP32_CPUINT_SOFTWARE1);
 
 #ifdef CONFIG_ESP32_WIFI
   g_irqmap[ESP32_IRQ_MAC] = IRQ_MKMAP(0, ESP32_CPUINT_MAC);
@@ -527,9 +529,6 @@ void up_irqinitialize(void)
   g_irqmap[ESP32_IRQ_RWBT_NMI]  = IRQ_MKMAP(0, ESP32_PERIPH_RWBT_NMI);
   g_irqmap[ESP32_IRQ_RWBLE_IRQ] = IRQ_MKMAP(0, ESP32_PERIPH_RWBLE_IRQ);
 #endif
-
-  g_irqmap[XTENSA_IRQ_SWINT] = IRQ_MKMAP(0, ESP32_CPUINT_SOFTWARE1);
-  g_irqmap[XTENSA_IRQ_SWINT] = IRQ_MKMAP(1, ESP32_CPUINT_SOFTWARE1);
 
   /* Initialize CPU interrupts */
 
@@ -579,11 +578,7 @@ void up_irqinitialize(void)
 
   /* Attach the software interrupt */
 
-  irq_attach(XTENSA_IRQ_SWINT, (xcpt_t)xtensa_swint, NULL);
-
-  /* Enable the software interrupt. */
-
-  up_enable_irq(XTENSA_IRQ_SWINT);
+  irq_attach(XTENSA_IRQ_SYSCALL, xtensa_swint, NULL);
 }
 
 /****************************************************************************
@@ -616,7 +611,7 @@ void up_disable_irq(int irq)
        */
 
 #ifdef CONFIG_SMP
-      int me = up_cpu_index();
+      int me = this_cpu();
       if (me != cpu)
         {
           /* It was the other CPU that enabled this interrupt. */
@@ -677,11 +672,11 @@ void up_enable_irq(int irq)
        * we are just overwriting the cpu part of the map.
        */
 
-      int cpu = up_cpu_index();
+      int cpu = this_cpu();
 
       /* Enable the CPU interrupt now for internal CPU. */
 
-      xtensa_enable_cpuint(&g_intenable[cpu], 1ul << cpuint);
+      xtensa_enable_cpuint(&g_intenable[cpu], (1ul << cpuint));
     }
   else
     {
@@ -711,8 +706,8 @@ void up_enable_irq(int irq)
 
       DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 
-      /* Attach the interrupt to the peripheral; the CPU interrupt was
-       * already enabled when allocated.
+      /* For peripheral interrupts, attach the interrupt to the peripheral;
+       * the CPU interrupt was already enabled when allocated.
        */
 
       int periph = ESP32_IRQ2PERIPH(irq);
@@ -740,22 +735,7 @@ void up_enable_irq(int irq)
 }
 
 /****************************************************************************
- * Name: xtensa_intstack_top
- *
- * Description:
- *   Return a pointer to the top of the correct interrupt stack for the
- *   given CPU.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
-uintptr_t xtensa_intstack_top(void)
-{
-  return g_cpu_intstack_top[up_cpu_index()];
-}
-
-/****************************************************************************
- * Name: xtensa_intstack_alloc
+ * Name: up_get_intstackbase
  *
  * Description:
  *   Return a pointer to the "alloc" the correct interrupt stack allocation
@@ -763,9 +743,10 @@ uintptr_t xtensa_intstack_top(void)
  *
  ****************************************************************************/
 
-uintptr_t xtensa_intstack_alloc(void)
+#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
+uintptr_t up_get_intstackbase(int cpu)
 {
-  return g_cpu_intstack_top[up_cpu_index()] - INTSTACK_SIZE;
+  return g_cpu_intstack_top[cpu] - INTSTACK_SIZE;
 }
 #endif
 
@@ -796,7 +777,7 @@ int esp32_cpuint_initialize(void)
 #ifdef CONFIG_SMP
   /* Which CPU are we initializing */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 #endif
 
@@ -1087,7 +1068,7 @@ uint32_t *xtensa_int_decode(uint32_t cpuints, uint32_t *regs)
 
   /* Select PRO or APP CPU interrupt mapping table */
 
-  cpu = up_cpu_index();
+  cpu = this_cpu();
 
 #ifdef CONFIG_SMP
   if (cpu != 0)
@@ -1178,7 +1159,7 @@ void esp32_irq_noniram_disable(void)
   uint32_t non_iram_ints;
 
   irqstate = enter_critical_section();
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   non_iram_ints = g_non_iram_int_mask[cpu];
 
   ASSERT(!g_non_iram_int_disabled_flag[cpu]);
@@ -1214,7 +1195,7 @@ void esp32_irq_noniram_enable(void)
   uint32_t non_iram_ints;
 
   irqstate = enter_critical_section();
-  cpu = up_cpu_index();
+  cpu = this_cpu();
   non_iram_ints = g_non_iram_int_disabled[cpu];
 
   ASSERT(g_non_iram_int_disabled_flag[cpu]);

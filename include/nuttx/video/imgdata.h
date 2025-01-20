@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/nuttx/video/imgdata.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -53,8 +55,8 @@
   ((d)->ops->init ? (d)->ops->init(d) : -ENOTTY)
 #define IMGDATA_UNINIT(d) \
   ((d)->ops->uninit ? (d)->ops->uninit(d) : -ENOTTY)
-#define IMGDATA_SET_BUF(d, a, s) \
-  ((d)->ops->set_buf ? (d)->ops->set_buf(d, a, s) : NULL)
+#define IMGDATA_SET_BUF(d, n, f, a, s) \
+  ((d)->ops->set_buf ? (d)->ops->set_buf(d, n, f, a, s) : NULL)
 #define IMGDATA_VALIDATE_FRAME_SETTING(d, n, f, i) \
   ((d)->ops->validate_frame_setting ? \
    (d)->ops->validate_frame_setting(d, n, f, i) : -ENOTTY)
@@ -96,6 +98,8 @@ struct imgdata_ops_s
   CODE int (*uninit)(FAR struct imgdata_s *data);
 
   CODE int (*set_buf)(FAR struct imgdata_s *data,
+                      uint8_t nr_datafmts,
+                      FAR imgdata_format_t *datafmts,
                       uint8_t *addr, uint32_t size);
 
   CODE int (*validate_frame_setting)(FAR struct imgdata_s *data,
@@ -109,6 +113,14 @@ struct imgdata_ops_s
                             FAR imgdata_capture_t callback,
                             FAR void *arg);
   CODE int (*stop_capture)(FAR struct imgdata_s *data);
+
+  /* This is a pair of user define frame memory allocation interface.
+   * If both are NULL, just using system memory operations.
+   */
+
+  CODE void *(*alloc)(FAR struct imgdata_s *data,
+                           uint32_t align_size, uint32_t size);
+  CODE void (*free)(FAR struct imgdata_s *data, void *addr);
 };
 
 /* Image data private data.  This structure only defines the initial fields

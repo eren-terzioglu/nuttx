@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>
@@ -316,7 +317,7 @@ static int rt_timer_thread(int argc, char *argv[])
       if (ret)
         {
           tmrerr("ERROR: Wait priv->toutsem error=%d\n", ret);
-          assert(0);
+          ASSERT(0);
         }
 
       flags = spin_lock_irqsave(&priv->lock);
@@ -411,8 +412,7 @@ static int rt_timer_isr(int irq, void *context, void *arg)
 
   if (!list_is_empty(&priv->runlist))
     {
-      /**
-       * When stop/delete timer, in the same time the hardware timer
+      /* When stop/delete timer, in the same time the hardware timer
        * interrupt triggers, function "stop/delete" remove the timer
        * from running list, so the 1st timer is not which triggers.
        */
@@ -684,6 +684,7 @@ int esp32_rt_timer_init(void)
   struct esp32_tim_dev_s *tim;
   struct esp32_rt_priv_s *priv = &g_rt_priv;
 
+  spin_lock_init(&priv->lock);
   tim = esp32_tim_init(ESP32_RT_TIMER);
   if (!tim)
     {

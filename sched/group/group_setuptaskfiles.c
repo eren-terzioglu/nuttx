@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/group/group_setuptaskfiles.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -79,8 +81,12 @@ int group_setuptaskfiles(FAR struct task_tcb_s *tcb,
 
   /* Duplicate the parent task's file descriptors */
 
-  ret = files_duplist(&rtcb->group->tg_filelist,
-                      &group->tg_filelist, actions, cloexec);
+  if (group != rtcb->group)
+    {
+      files_duplist(&rtcb->group->tg_filelist,
+                    &group->tg_filelist, actions, cloexec);
+    }
+
   if (ret >= 0 && actions != NULL)
     {
       ret = spawn_file_actions(&tcb->cmn, actions);

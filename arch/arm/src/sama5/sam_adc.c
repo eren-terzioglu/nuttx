@@ -1,13 +1,11 @@
 /****************************************************************************
  * arch/arm/src/sama5/sam_adc.c
  *
- *   Copyright (C) 2013, 2014, 2017-2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * The Atmel sample code has a BSD compatible license that requires this
- * copyright notice:
- *
- *   Copyright (c) 2012, Atmel Corporation
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2017-2018 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2013,2014 Gregory Nutt. All rights reserved.
+ * SPDX-FileCopyrightText: 2012 Atmel Corporation
+ * SPDX-FileContributor: Gregory Nutt <gnutt@nuttx.orgr>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -481,7 +479,9 @@ static void sam_adc_gain(struct sam_adc_s *priv);
 static void sam_adc_analogchange(struct sam_adc_s *priv);
 static void sam_adc_sequencer(struct sam_adc_s *priv);
 static void sam_adc_channels(struct sam_adc_s *priv);
+#if defined(CONFIG_SAMA5_ADC_PERIODIC_TRIG)
 static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period);
+#endif
 #endif
 
 /****************************************************************************
@@ -858,7 +858,7 @@ static int sam_adc_dmasetup(struct sam_adc_s *priv, uint8_t *buffer,
  *   None
  *
  ****************************************************************************/
-
+#if defined(CONFIG_SAMA5_ADC_PERIODIC_TRIG)
 static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period)
 {
   uint32_t trigper;
@@ -909,6 +909,7 @@ static void sam_adc_trigperiod(struct sam_adc_s *priv, uint32_t period)
   regval |=  ADC_TRGR_TRGPER(trigper);
   sam_adc_putreg(priv, SAM_ADC_TRGR, regval);
 }
+#endif
 
 /****************************************************************************
  * ADC interrupt handling
@@ -1103,7 +1104,11 @@ static int sam_adc_bind(struct adc_dev_s *dev,
 
 static void sam_adc_reset(struct adc_dev_s *dev)
 {
+#if defined(CONFIG_SAMA5_ADC_REGDEBUG) || \
+    defined(CONFIG_SAMA5_ADC_DMA)      || \
+    defined(CONFIG_SAMA5_ADC_TIOATRIG)
   struct sam_adc_s *priv = (struct sam_adc_s *)dev->ad_priv;
+#endif
   uint32_t regval;
 
   ainfo("Resetting..\n");
@@ -1333,7 +1338,11 @@ static int sam_adc_ioctl(struct adc_dev_s *dev, int cmd, unsigned long arg)
 {
 #ifdef CONFIG_SAMA5_ADC_SWTRIG
   struct sam_adc_s *priv = (struct sam_adc_s *)dev->ad_priv;
+#  ifndef CONFIG_SAMA5_ADC_REGDEBUG
+  UNUSED(priv);
+#  endif
 #endif
+
   int ret = OK;
 
   ainfo("cmd=%d arg=%ld\n", cmd, arg);

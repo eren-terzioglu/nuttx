@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm64/include/elf.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -24,6 +26,12 @@
 
 #ifndef __ARCH_ARM64_INCLUDE_ELF_H
 #define __ARCH_ARM64_INCLUDE_ELF_H
+
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <stdint.h>
 
 /****************************************************************************
  * Pre-processor Prototypes
@@ -206,9 +214,23 @@
 #define PT_AARCH64_ARCHEXT  0x70000000  /* Reserved for architecture compatibility information */
 #define PT_AARCH64_UNWIND   0x70000001  /* Reserved for exception unwinding tables */
 
+#define EF_FLAG             0
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
+
+typedef unsigned long elf_greg_t;
+struct user_pt_regs
+{
+  uint64_t regs[31];
+  uint64_t sp;
+  uint64_t pc;
+  uint64_t pstate;
+};
+
+#define ELF_NGREG (sizeof(struct user_pt_regs) / sizeof(elf_greg_t))
+typedef elf_greg_t elf_gregset_t[ELF_NGREG];
 
 /****************************************************************************
  * Public Data

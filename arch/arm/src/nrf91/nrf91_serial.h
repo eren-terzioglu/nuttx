@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/nrf91/nrf91_serial.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -49,4 +51,4 @@
 void nrf91_earlyserialinit(void);
 #endif
 
-#endif /* __ARCH_ARM_SRC_NRF91_NRF91@_SERIAL_H */
+#endif /* __ARCH_ARM_SRC_NRF91_NRF91_SERIAL_H */

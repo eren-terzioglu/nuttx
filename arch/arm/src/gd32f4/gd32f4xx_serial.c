@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/gd32f4/gd32f4xx_serial.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -37,6 +39,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
@@ -118,7 +121,7 @@ struct up_dev_s
   bool            oflow;         /* output flow control (CTS) enabled */
 #  endif
 
-  uint16_t        oversamp       /* USART oversample mode */
+  uint16_t        oversamp;      /* USART oversample mode */
   uintptr_t       usartbase;     /* Base address of UART registers */
   uint32_t        baud;          /* Configured baud */
   uint32_t        clock;         /* Frequency of the UART */
@@ -155,6 +158,7 @@ struct up_dev_s
   const uint8_t   stop_2bits;    /* True: Configure with 2 stop bits instead of 1 */
   const uint32_t  tx_gpio;       /* USART TX GPIO pin configuration */
   const uint32_t  rx_gpio;       /* USART RX GPIO pin configuration */
+  spinlock_t      lock;          /* Spinlock */
 
 #  ifdef CONFIG_SERIAL_IFLOWCONTROL
   const uint32_t  rts_gpio;      /* UART RTS GPIO pin configuration */
@@ -434,6 +438,7 @@ static struct up_dev_s g_usart0priv =
 
   .tx_gpio       = GPIO_USART0_TX,
   .rx_gpio       = GPIO_USART0_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART0_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART0_RTS,
@@ -506,6 +511,7 @@ static struct up_dev_s g_usart1priv =
 
   .tx_gpio       = GPIO_USART1_TX,
   .rx_gpio       = GPIO_USART1_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART1_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART1_RTS,
@@ -578,6 +584,7 @@ static struct up_dev_s g_usart2priv =
 
   .tx_gpio       = GPIO_USART2_TX,
   .rx_gpio       = GPIO_USART2_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART2_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART2_RTS,
@@ -650,6 +657,7 @@ static struct up_dev_s g_usart5priv =
 
   .tx_gpio       = GPIO_USART5_TX,
   .rx_gpio       = GPIO_USART5_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_USART5_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_USART5_RTS,
@@ -722,6 +730,7 @@ static struct up_dev_s g_uart3priv =
 
   .tx_gpio       = GPIO_UART3_TX,
   .rx_gpio       = GPIO_UART3_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART3_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART3_RTS,
@@ -794,6 +803,7 @@ static struct up_dev_s g_uart4priv =
 
   .tx_gpio       = GPIO_UART4_TX,
   .rx_gpio       = GPIO_UART4_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART4_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART4_RTS,
@@ -866,6 +876,7 @@ static struct up_dev_s g_uart6priv =
 
   .tx_gpio       = GPIO_UART6_TX,
   .rx_gpio       = GPIO_UART6_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART6_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART6_RTS,
@@ -938,6 +949,7 @@ static struct up_dev_s g_uart7priv =
 
   .tx_gpio       = GPIO_UART7_TX,
   .rx_gpio       = GPIO_UART7_RX,
+  .lock          = SP_UNLOCKED,
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) && defined(CONFIG_UART7_IFLOWCONTROL)
   .iflow         = true,
   .rts_gpio      = GPIO_UART7_RTS,
@@ -1124,7 +1136,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   irqstate_t flags;
   uint32_t ctl_ie;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   if (ie)
     {
@@ -1158,7 +1170,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   ctl_ie = (USART_CFG_CTL_MASK << USART_CFG_SHIFT);
   up_setusartint(priv, ctl_ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -1169,11 +1181,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint32_t ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&priv->lock);
 
   up_setusartint(priv, ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -1213,14 +1225,6 @@ static void gd32_usart_configure(struct uart_dev_s *dev)
   uint32_t intdiv;
   uint32_t fradiv;
   uint32_t regval;
-
-  /* Reset USART */
-
-  gd32_usart_reset(priv->usartbase);
-
-  /* Enable USART clock */
-
-  gd32_usart_clock_enable(priv->usartbase);
 
   /* Configure the USART oversample mode. */
 
@@ -1334,6 +1338,10 @@ static int up_setup(struct uart_dev_s *dev)
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
   uint32_t regval;
+
+  /* Enable USART clock */
+
+  gd32_usart_clock_enable(priv->usartbase);
 
   /* Configure pins for USART use */
 
@@ -2932,7 +2940,7 @@ void gd32_serial_dma_poll(void)
  *
  ****************************************************************************/
 
-int up_putc(int ch)
+void up_putc(int ch)
 {
 #ifdef CONSOLE_UART
 
@@ -2940,20 +2948,9 @@ int up_putc(int ch)
   uint32_t ie;
 
   up_disableusartint(priv, &ie);
-
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
   up_restoreusartint(priv, ie);
 #endif
-  return ch;
 }
 
 #else /* USE_SERIALDRIVER */
@@ -2966,21 +2963,11 @@ int up_putc(int ch)
  *
  ****************************************************************************/
 
-int up_putc(int ch)
+void up_putc(int ch)
 {
 #ifdef CONSOLE_UART
-  /* Check for LF */
-
-  if (ch == '\n')
-    {
-      /* Add CR */
-
-      arm_lowputc('\r');
-    }
-
   arm_lowputc(ch);
 #endif
-  return ch;
 }
 
 #endif /* USE_SERIALDRIVER */

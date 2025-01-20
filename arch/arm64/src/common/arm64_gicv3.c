@@ -1,6 +1,8 @@
 /***************************************************************************
  * arch/arm64/src/common/arm64_gicv3.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -27,6 +29,7 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
+#include <arch/barriers.h>
 #include <arch/irq.h>
 #include <arch/chip/chip.h>
 #include <sched/sched.h>
@@ -69,7 +72,8 @@
 #  define IGROUPR_SGI_VAL 0xFFFFFFFFU
 #endif
 
-#define SMP_FUNC_CALL_IPI GIC_IRQ_SGI3
+#define PENDING_GRP1NS_INTID 1021
+#define SPURIOUS_INT         1023
 
 /***************************************************************************
  * Private Data
@@ -77,7 +81,7 @@
 
 /* Redistributor base addresses for each core */
 
-static unsigned long gic_rdists[CONFIG_SMP_NCPUS];
+static unsigned long g_gic_rdists[CONFIG_SMP_NCPUS];
 
 /***************************************************************************
  * Private Functions
@@ -111,7 +115,7 @@ static inline int sys_test_bit(unsigned long addr, unsigned int bit)
 
 static inline unsigned long gic_get_rdist(void)
 {
-  return gic_rdists[this_cpu()];
+  return g_gic_rdists[this_cpu()];
 }
 
 static inline uint32_t read_gicd_wait_rwp(void)
@@ -248,17 +252,19 @@ void arm64_gic_irq_enable(unsigned int intid)
   uint32_t mask = BIT(intid & (GIC_NUM_INTR_PER_REG - 1));
   uint32_t idx  = intid / GIC_NUM_INTR_PER_REG;
 
-  putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
-
   /* Affinity routing is enabled for Non-secure state (GICD_CTLR.ARE_NS
    * is set to '1' when GIC distributor is initialized) ,so need to set
    * SPI's affinity, now set it to be the PE on which it is enabled.
    */
 
+#ifndef CONFIG_ARM64_GICV3_SPI_ROUTING_CPU0
   if (GIC_IS_SPI(intid))
     {
-      arm64_gic_write_irouter((GET_MPIDR() & MPIDR_ID_MASK), intid);
+      arm64_gic_write_irouter(up_cpu_index(), intid);
     }
+#endif
+
+  putreg32(mask, ISENABLER(GET_DIST_BASE(intid), idx));
 }
 
 void arm64_gic_irq_disable(unsigned int intid)
@@ -292,6 +298,13 @@ unsigned int arm64_gic_get_active_irq(void)
 
   intid = read_sysreg(ICC_IAR1_EL1);
 
+  /* The ARM GICv3 specification states in 4.1.1 Physical CPU Interface:
+   * The effects of reading ICC_IAR0_EL1 and ICC_IAR1_EL1
+   * on the state of a returned INTID are not guaranteed
+   * to be visible until after the execution of a DSB.
+   */
+
+  UP_DSB();
   return intid;
 }
 
@@ -304,6 +317,13 @@ unsigned int arm64_gic_get_active_fiq(void)
 
   intid = read_sysreg(ICC_IAR0_EL1);
 
+  /* The ARM GICv3 specification states in 4.1.1 Physical CPU Interface:
+   * The effects of reading ICC_IAR0_EL1 and ICC_IAR1_EL1
+   * on the state of a returned INTID are not guaranteed
+   * to be visible until after the execution of a DSB.
+   */
+
+  UP_DSB();
   return intid;
 }
 #endif
@@ -321,11 +341,13 @@ void aarm64_gic_eoi_irq(unsigned int intid)
    * DEVICE nGnRnE attribute.
    */
 
-  ARM64_DSB();
+  UP_DSB();
 
   /* (AP -> Pending) Or (Active -> Inactive) or (AP to AP) nested case */
 
   write_sysreg(intid, ICC_EOIR1_EL1);
+
+  UP_ISB();
 }
 
 #ifdef CONFIG_ARM64_DECODEFIQ
@@ -342,11 +364,12 @@ void arm64_gic_eoi_fiq(unsigned int intid)
    * DEVICE nGnRnE attribute.
    */
 
-  ARM64_DSB();
+  UP_DSB();
 
   /* (AP -> Pending) Or (Active -> Inactive) or (AP to AP) nested case */
 
   write_sysreg(intid, ICC_EOIR0_EL1);
+  UP_ISB();
 }
 #endif
 
@@ -358,10 +381,8 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   uint32_t aff1;
   uint64_t sgi_val;
   uint32_t regval;
-  unsigned long base;
 
-  base = gic_get_rdist() + GICR_SGI_BASE_OFF;
-  assert(GIC_IS_SGI(sgi_id));
+  ASSERT(GIC_IS_SGI(sgi_id));
 
   /* Extract affinity fields from target */
 
@@ -372,9 +393,11 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
   sgi_val = GICV3_SGIR_VALUE(aff3, aff2, aff1, sgi_id, SGIR_IRM_TO_AFF,
                              target_list);
 
-  ARM64_DSB();
+  UP_DSB();
 
-  regval = getreg32(IGROUPR(base, 0));
+  /* Read the IGROUPR0 value we set in `gicv3_cpuif_init` */
+
+  regval = IGROUPR_SGI_VAL;
 
   if (regval & BIT(sgi_id))
     {
@@ -385,12 +408,12 @@ static int arm64_gic_send_sgi(unsigned int sgi_id, uint64_t target_aff,
       write_sysreg(sgi_val, ICC_SGI0R_EL1); /* Group 0 */
     }
 
-  ARM64_ISB();
+  UP_ISB();
 
   return 0;
 }
 
-int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
+void arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
 {
   uint64_t pre_cluster_id = UINT64_MAX;
   uint64_t curr_cluster_id;
@@ -419,8 +442,6 @@ int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list)
     }
 
   arm64_gic_send_sgi(sgi_id, pre_cluster_id, tlist);
-
-  return 0;
 }
 
 /* Wake up GIC redistributor.
@@ -465,10 +486,6 @@ static void gicv3_cpuif_init(void)
 
   gic_wait_rwp(0);
 
-  /* Clear pending */
-
-  putreg32(BIT64_MASK(GIC_NUM_INTR_PER_REG), ICPENDR(base, 0));
-
   /* Configure all SGIs/PPIs as G1S or G1NS depending on Zephyr
    * is run in EL1S or EL1NS respectively.
    * All interrupts will be delivered as irq
@@ -503,9 +520,12 @@ static void gicv3_cpuif_init(void)
         (icc_sre | ICC_SRE_ELX_SRE_BIT | ICC_SRE_ELX_DIB_BIT |
          ICC_SRE_ELX_DFB_BIT);
       write_sysreg(icc_sre, ICC_SRE_EL1);
+
+      UP_ISB();
+
       icc_sre = read_sysreg(ICC_SRE_EL1);
 
-      assert(icc_sre & ICC_SRE_ELX_SRE_BIT);
+      ASSERT(icc_sre & ICC_SRE_ELX_SRE_BIT);
     }
 
   write_sysreg(GIC_IDLE_PRIO, ICC_PMR_EL1);
@@ -517,6 +537,8 @@ static void gicv3_cpuif_init(void)
 #ifdef CONFIG_ARM64_DECODEFIQ
   write_sysreg(1, ICC_IGRPEN0_EL1);
 #endif
+
+  UP_ISB();
 }
 
 static void gicv3_dist_init(void)
@@ -590,8 +612,27 @@ static void gicv3_dist_init(void)
        intid += GIC_NUM_CFG_PER_REG)
     {
       idx = intid / GIC_NUM_CFG_PER_REG;
+#ifdef CONFIG_ARM64_GICV3_SPI_EDGE
+      /* Configure all SPIs as edge-triggered by default */
+
+      putreg32(0xaaaaaaaa, ICFGR(base, idx));
+#else
+      /* Configure all SPIs as level-sensitive by default */
+
       putreg32(0, ICFGR(base, idx));
+#endif
     }
+
+  /* Configure SPI interrupt affinity routing to CPU0 */
+
+#ifdef CONFIG_ARM64_GICV3_SPI_ROUTING_CPU0
+  uint64_t mpid = arm64_get_mpid(0);
+
+  for (intid = GIC_SPI_INT_BASE; intid < num_ints; intid++)
+    {
+      putreg64(mpid, IROUTER(base, intid));
+    }
+#endif
 
   /* TODO: Some arrch64 Cortex-A core maybe without security state
    * it has different GIC configure with standard arrch64 A or R core
@@ -632,11 +673,8 @@ static void gicv3_dist_init(void)
 #ifdef CONFIG_SMP
   /* Attach SGI interrupt handlers. This attaches the handler to all CPUs. */
 
-  DEBUGVERIFY(irq_attach(GIC_IRQ_SGI2, arm64_pause_handler, NULL));
-#  ifdef CONFIG_SMP_CALL
-  DEBUGVERIFY(irq_attach(SMP_FUNC_CALL_IPI,
-                         nxsched_smp_call_handler, NULL));
-#  endif
+  DEBUGVERIFY(irq_attach(GIC_SMP_SCHED, arm64_smp_sched_handler, NULL));
+  DEBUGVERIFY(irq_attach(GIC_SMP_CALL, nxsched_smp_call_handler, NULL));
 #endif
 }
 
@@ -765,7 +803,7 @@ uint64_t * arm64_decodeirq(uint64_t * regs)
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -789,11 +827,33 @@ uint64_t * arm64_decodefiq(uint64_t * regs)
 
   irq = arm64_gic_get_active_fiq();
 
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  /* FIQ is group0 interrupt */
+
+  if (irq == PENDING_GRP1NS_INTID)
+    {
+      /* irq 1021 indicates that the irq being acked is expected at EL1/EL2.
+       * However, EL3 has no interrupts, only FIQs, see:
+       * 'Arm® Generic Interrupt Controller, Architecture Specification GIC
+       *  architecture version 3 and version 4' Arm IHI 0069G (ID011821)
+       * 'Table 4-3 Interrupt signals for two Security states when EL3 is
+       *  using AArch64 state'
+       *
+       * Thus we know there's an interrupt so let's handle it from group1.
+       */
+
+      regs = arm64_decodeirq(regs);
+      arm64_gic_eoi_fiq(irq);
+
+      return regs;
+    }
+#endif
+
   /* Ignore spurions IRQs.  ICCIAR will report 1023 if there is no pending
    * interrupt.
    */
 
-  DEBUGASSERT(irq < NR_IRQS || irq == 1023);
+  DEBUGASSERT(irq < NR_IRQS || irq == SPURIOUS_INT);
   if (irq < NR_IRQS)
     {
       /* Dispatch the interrupt */
@@ -827,7 +887,7 @@ static int gic_validate_dist_version(void)
     }
   else
     {
-      sinfo("No GIC version detect\n");
+      serr("No GIC version detect\n");
       return -ENODEV;
     }
 
@@ -846,7 +906,7 @@ static int gic_validate_dist_version(void)
 
   if (typer & GICD_TYPER_MBIS)
     {
-      sinfo("MBIs is present, But No support\n");
+      swarn("MBIs is present, But No support\n");
     }
 
   return 0;
@@ -867,7 +927,7 @@ static int gic_validate_redist_version(void)
   if (reg != GICR_PIDR2_ARCH_GICV3 &&
              reg != GICR_PIDR2_ARCH_GICV4)
     {
-      sinfo("No redistributor present 0x%lx\n", redist_base);
+      serr("No redistributor present 0x%lx\n", redist_base);
       return -ENODEV;
     }
 
@@ -894,14 +954,14 @@ static void arm64_gic_init(void)
   uint8_t   cpu;
   int       err;
 
-  cpu             = this_cpu();
-  gic_rdists[cpu] = CONFIG_GICR_BASE +
-                    up_cpu_index() * CONFIG_GICR_OFFSET;
+  cpu               = this_cpu();
+  g_gic_rdists[cpu] = CONFIG_GICR_BASE +
+                      up_cpu_index() * CONFIG_GICR_OFFSET;
 
   err = gic_validate_redist_version();
   if (err)
     {
-      sinfo("no redistributor detected, giving up ret=%d\n", err);
+      swarn("no redistributor detected, giving up ret=%d\n", err);
       return;
     }
 
@@ -910,10 +970,8 @@ static void arm64_gic_init(void)
   gicv3_cpuif_init();
 
 #ifdef CONFIG_SMP
-  up_enable_irq(GIC_IRQ_SGI2);
-#  ifdef CONFIG_SMP_CALL
-  up_enable_irq(SMP_FUNC_CALL_IPI);
-#  endif
+  up_enable_irq(GIC_SMP_SCHED);
+  up_enable_irq(GIC_SMP_CALL);
 #endif
 }
 
@@ -924,7 +982,7 @@ int arm64_gic_initialize(void)
   err = gic_validate_dist_version();
   if (err)
     {
-      sinfo("no distributor detected, giving up ret=%d\n", err);
+      swarn("no distributor detected, giving up ret=%d\n", err);
       return err;
     }
 
@@ -942,9 +1000,15 @@ void arm64_gic_secondary_init(void)
 }
 #endif
 
-#ifdef CONFIG_SMP_CALL
-void up_send_smp_call(cpu_set_t cpuset)
+/***************************************************************************
+ * Name: up_get_legacy_irq
+ *
+ * Description:
+ *   Reserve vector for legacy
+ *
+ ***************************************************************************/
+
+int up_get_legacy_irq(uint32_t devfn, uint8_t line, uint8_t pin)
 {
-  up_trigger_irq(SMP_FUNC_CALL_IPI, cpuset);
+  return -ENOTSUP;
 }
-#endif

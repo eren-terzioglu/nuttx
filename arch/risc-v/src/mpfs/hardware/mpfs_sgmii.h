@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/mpfs/hardware/mpfs_sgmii.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -30,38 +32,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define MPFS_MPUCFG_SEG0_REG0_OFFSET 0xd00
-#define MPFS_MPUCFG_SEG0_REG1_OFFSET 0xd08
-#define MPFS_MPUCFG_SEG0_REG2_OFFSET 0xd10
-#define MPFS_MPUCFG_SEG0_REG3_OFFSET 0xd18
-#define MPFS_MPUCFG_SEG0_REG4_OFFSET 0xd20
-#define MPFS_MPUCFG_SEG0_REG5_OFFSET 0xd28
-#define MPFS_MPUCFG_SEG0_REG6_OFFSET 0xd30
-
-#define MPFS_MPUCFG_SEG1_REG0_OFFSET 0xe00
-#define MPFS_MPUCFG_SEG1_REG1_OFFSET 0xe08
-#define MPFS_MPUCFG_SEG1_REG2_OFFSET 0xe10
-#define MPFS_MPUCFG_SEG1_REG3_OFFSET 0xe18
-#define MPFS_MPUCFG_SEG1_REG4_OFFSET 0xe20
-#define MPFS_MPUCFG_SEG1_REG5_OFFSET 0xe28
-#define MPFS_MPUCFG_SEG1_REG6_OFFSET 0xe30
-
-#define MPFS_MPUCFG_SEG0_REG0 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG0_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG1 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG1_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG2 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG2_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG3 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG3_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG4 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG4_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG5 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG5_OFFSET)
-#define MPFS_MPUCFG_SEG0_REG6 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG0_REG6_OFFSET)
-
-#define MPFS_MPUCFG_SEG1_REG0 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG0_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG1 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG1_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG2 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG2_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG3 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG3_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG4 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG4_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG5 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG5_OFFSET)
-#define MPFS_MPUCFG_SEG1_REG6 (MPFS_MPUCFG_BASE + MPFS_MPUCFG_SEG1_REG6_OFFSET)
 
 #define MPFS_IOSCBCFG_TIMER_OFFSET                                 0x08
 

@@ -1216,17 +1216,17 @@ choice
 		ends with a number or letter that designates the FLASH size.
 
 				Designator  Size in KiB
-				   4   	16
-				   6   	32
-				   8   	64
-				   B   	128
-				   Z   	192
-				   C   	256
-				   D   	384
-				   E   	512
-				   F   	768
-				   G   	1024
-				   I   	2048
+				   4    16
+				   6    32
+				   8    64
+				   B    128
+				   Z    192
+				   C    256
+				   D    384
+				   E    512
+				   F    768
+				   G    1024
+				   I    2048
 
 		This configuration option defaults to using the configuration based
 		on that designator or the default smaller size if there is no last
@@ -1536,6 +1536,7 @@ config STM32_STM32F33XX
 	select ARCH_CORTEXM4
 	select ARCH_HAVE_FPU
 	select STM32_HAVE_HRTIM1
+	select STM32_HAVE_HRTIM1_PLLCLK
 	select STM32_HAVE_COMP2
 	select STM32_HAVE_COMP4
 	select STM32_HAVE_COMP6
@@ -2247,6 +2248,10 @@ config STM32_HAVE_IOCOMPENSATION
 	default n
 
 config STM32_HAVE_HRTIM1
+	bool
+	default n
+
+config STM32_HAVE_HRTIM1_PLLCLK
 	bool
 	default n
 
@@ -3028,6 +3033,7 @@ config STM32_LPUART1
 	bool "LPUART1"
 	default n
 	depends on STM32_HAVE_LPUART1
+	select STM32_USART
 
 config STM32_LTDC
 	bool "LTDC"
@@ -8107,6 +8113,7 @@ endif # STM32_HRTIM_FAULTS
 config STM32_HRTIM_CLK_FROM_PLL
 	bool "HRTIM Clock from PLL"
 	default n
+	depends on STM32_HAVE_HRTIM1_PLLCLK
 	---help---
 		Set PLL as the clock source for HRTIM.
 		This configuration requires the following conditions:
@@ -10235,6 +10242,54 @@ config STM32_HCIUART8_RXDMA
 		In high data rate usage, Rx DMA may eliminate Rx overrun errors
 
 endif # STM32_UART8_HCIUART
+
+choice
+	prompt "LPUART1 Driver Configuration"
+	default STM32_LPUART1_SERIALDRIVER
+	depends on STM32_LPUART1
+
+config STM32_LPUART1_SERIALDRIVER
+	bool "Standard serial driver"
+	select LPUART1_SERIALDRIVER
+	select ARCH_HAVE_SERIAL_TERMIOS
+	select STM32_SERIALDRIVER
+
+endchoice # LPUART1 Driver Configuration
+
+if STM32_LPUART1_SERIALDRIVER
+
+config LPUART1_RS485
+	bool "RS-485 on LPUART1"
+	default n
+	---help---
+		Enable RS-485 interface on LPUART1. Your board config will have to
+		provide GPIO_LPUART1_RS485_DIR pin definition. Currently it cannot be
+		used with LPUART1_RXDMA.
+
+config LPUART1_RS485_DIR_POLARITY
+	int "LPUART1 RS-485 DIR pin polarity"
+	default 1
+	range 0 1
+	depends on LPUART1_RS485
+	---help---
+		Polarity of DIR pin for RS-485 on LPUART1. Set to state on DIR pin which
+		enables TX (0 - low / nTXEN, 1 - high / TXEN).
+
+config LPUART1_RXDMA
+	bool "LPUART1 Rx DMA"
+	default n
+	depends on STM32_DMA1
+	---help---
+		In high data rate usage, Rx DMA may eliminate Rx overrun errors
+
+config LPUART1_TXDMA
+	bool "LPUART1 Tx DMA"
+	default n
+	depends on STM32_DMA1
+	---help---
+		In high data rate usage, Tx DMA may reduce CPU load
+
+endif # STM32_LPUART1_SERIALDRIVER
 
 menu "Serial Driver Configuration"
 	depends on STM32_SERIALDRIVER

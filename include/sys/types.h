@@ -1,6 +1,8 @@
 /****************************************************************************
  * include/sys/types.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -192,14 +194,14 @@ typedef _wchar_t     wchar_t;
  *   An integral type capable of storing any valid value of wchar_t, or WEOF.
  */
 
-typedef int wint_t;
+typedef _wint_t wint_t;
 
 /* wctype_t
  *   A scalar type of a data object that can hold values which represent
  *   locale-specific character classification.
  */
 
-typedef int wctype_t;
+typedef _wctype_t wctype_t;
 
 #if defined(CONFIG_FS_LARGEFILE)
 /* Large file versions */
@@ -230,6 +232,8 @@ typedef int32_t      off_t;
 typedef int32_t      fpos_t;
 #endif
 
+typedef off_t        loff_t;
+
 /* blksize_t is a signed integer value used for file block sizes */
 
 typedef int16_t      blksize_t;
@@ -249,7 +253,7 @@ typedef uint16_t     sa_family_t;
 
 #ifdef CONFIG_SYSTEM_TIME64
 typedef uint64_t     clock_t;
-typedef int64_t      time_t;         /* Holds time in seconds */
+typedef uint64_t     time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t     clock_t;
 typedef uint32_t     time_t;         /* Holds time in seconds */
@@ -268,11 +272,7 @@ typedef int32_t      suseconds_t;
 
 /* This is the smallest integer type that will hold a bitset of all CPUs */
 
-#if (CONFIG_SMP_NCPUS <= 8)
-typedef volatile uint8_t cpu_set_t;
-#elif (CONFIG_SMP_NCPUS <= 16)
-typedef volatile uint16_t cpu_set_t;
-#elif (CONFIG_SMP_NCPUS <= 32)
+#if (CONFIG_SMP_NCPUS <= 32)
 typedef volatile uint32_t cpu_set_t;
 #else
 #  error SMP: Extensions needed to support this number of CPUs
@@ -320,7 +320,7 @@ typedef CODE int (*main_t)(int argc, FAR char *argv[]);
 enum
 {
   ERROR = -1,
-  OK = 0,
+  OK = 0
 };
 
 /****************************************************************************

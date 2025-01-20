@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/risc-v/src/common/crt0.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -143,7 +145,7 @@ static void exec_dtors(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: _start
+ * Name: __start
  *
  * Description:
  *   This function is the low level entry point into the main thread of
@@ -162,7 +164,7 @@ static void exec_dtors(void)
  *
  ****************************************************************************/
 
-void _start(int argc, char *argv[])
+void __start(int argc, char *argv[])
 {
   int ret;
 

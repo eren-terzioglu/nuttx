@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/nrf52/nrf52_gpiote.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -53,8 +55,9 @@
 
 struct nrf52_gpiote_callback_s
 {
-  xcpt_t callback;
-  void  *arg;
+  xcpt_t    callback;
+  void     *arg;
+  uint32_t  pinset;
 };
 
 /****************************************************************************
@@ -462,12 +465,15 @@ int nrf52_gpiote_set_event(uint32_t pinset,
 
   flags = enter_critical_section();
 
-  /* Get free channel */
+  /* Get free channel or channel already used by pinset */
 
   for (i = 0; i < GPIOTE_CHANNELS; i++)
     {
-      if (g_gpiote_ch_callbacks[i].callback == NULL)
+      if (g_gpiote_ch_callbacks[i].callback == NULL ||
+          g_gpiote_ch_callbacks[i].pinset == pinset)
         {
+          g_gpiote_ch_callbacks[i].pinset = pinset;
+
           /* Configure channel */
 
           nrf52_gpiote_set_ch_event(pinset, i,

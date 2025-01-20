@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/cxd56xx/cxd56_nxaudio.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -282,7 +284,7 @@ struct cxd56_dev_s
   uint32_t                samplerate;       /* Sample rate */
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
   int16_t                 volume;           /* Output volume {0..63} */
-#endif  /* CONFIG_AUDIO_EXCLUDE_VOLUME */
+#endif /* CONFIG_AUDIO_EXCLUDE_VOLUME */
   uint8_t                 channels;         /* Number of channels (1..8) */
 
   uint16_t                mic_gain;         /* Mic gain */

@@ -1,6 +1,8 @@
 /****************************************************************************
  * arch/arm/src/armv8-m/arm_secure_irq.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,7 +35,7 @@
 #include "arm_internal.h"
 #include "nvic.h"
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
 
 /****************************************************************************
  * Public Functions

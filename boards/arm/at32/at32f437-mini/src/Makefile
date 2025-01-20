@@ -1,5 +1,7 @@
 ############################################################################
-# boards/arm/at32/at32f437-mini/src/Make.defs
+# boards/arm/at32/at32f437-mini/src/Makefile
+#
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -78,6 +80,10 @@ endif
 
 ifeq ($(CONFIG_MTD_AT24XX),y)
 	CSRCS += at32_at24.c
+endif
+
+ifeq ($(CONFIG_ETC_ROMFS),y)
+	CSRCS += etc_romfs.c
 endif
 
 include $(TOPDIR)/boards/Board.mk

@@ -1,6 +1,8 @@
 /****************************************************************************
  * drivers/usbdev/usbdev_req.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -47,7 +49,11 @@
 #  define EP_ALLOCBUFFER(ep,nb)    (ep)->ops->allocbuffer(ep,nb)
 #  define EP_FREEBUFFER(ep,buf)    (ep)->ops->freebuffer(ep,buf)
 #else
-#  define EP_ALLOCBUFFER(ep,nb)    kmm_malloc(nb)
+#  if CONFIG_USBDEV_EPBUFFER_ALIGNMENT != 0
+#    define EP_ALLOCBUFFER(ep,nb)  kmm_memalign(CONFIG_USBDEV_EPBUFFER_ALIGNMENT, nb)
+#  else
+#    define EP_ALLOCBUFFER(ep,nb)  kmm_malloc(nb)
+#  endif
 #  define EP_FREEBUFFER(ep,buf)    kmm_free(buf)
 #endif
 
@@ -64,7 +70,7 @@
  ****************************************************************************/
 
 FAR struct usbdev_req_s *usbdev_allocreq(FAR struct usbdev_ep_s *ep,
-                                         uint16_t len)
+                                         size_t len)
 {
   FAR struct usbdev_req_s *req;
 

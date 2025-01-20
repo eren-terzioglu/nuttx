@@ -7,9 +7,17 @@ Network Support
 
   sixlowpan.rst
   socketcan.rst
+  pkt.rst
+  ipfilter.rst
+  nat.rst
+  netdev.rst
+  netdriver.rst
   netguardsize.rst
+  netlink.rst
   slip.rst
   wqueuedeadlocks.rst
+  tcp_network_perf.rst
+  delay_act_and_tcp_perf.rst
 
 ``net`` Directory Structure ::
 
@@ -33,7 +41,7 @@ Network Support
        +- nat        - Network Address Translation (NAT)
        +- neighbor   - Neighbor Discovery Protocol (IPv6)
        +- netdev     - Socket network device interface
-       +- netfiletr  - Iptables Interface
+       +- netfilter  - Iptables Interface
        +- netlink    - Netlink IPC socket interface
        +- pkt        - "Raw" packet socket support
        +- procfs     - net devices PROCFS support

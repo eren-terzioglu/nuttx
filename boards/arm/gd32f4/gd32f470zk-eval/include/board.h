@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/arm/gd32f4/gd32f470zk-eval/include/board.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -134,7 +136,7 @@
  */
 
 #define GD32_PLL_PLLPSC            RCU_PLL_PLLPSC(25)
-#define GD32_PLL_PLLN              RCU_PLL_PLLN(336)
+#define GD32_PLL_PLLN              RCU_PLL_PLLN(480)
 #define GD32_PLL_PLLP              RCU_PLL_PLLP(2)
 #define GD32_PLL_PLLQ              RCU_PLL_PLLQ(7)
 

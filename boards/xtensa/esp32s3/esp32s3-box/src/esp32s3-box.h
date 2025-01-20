@@ -1,6 +1,8 @@
 /****************************************************************************
  * boards/xtensa/esp32s3/esp32s3-box/src/esp32s3-box.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -44,8 +46,7 @@
 
 #define DISPLAY_SPI         2
 
-/**
- * CS:   5
+/* CS:   5
  * CLK:  7
  * MOSI: 6
  * MISO: N/A
@@ -64,8 +65,7 @@
 
 #define TOUCHSCEEN_I2C      0
 
-/**
- * SCL: 18
+/* SCL: 18
  * SDA: 8
  */
 

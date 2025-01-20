@@ -16,11 +16,9 @@ Enable Kconfig
 
     .. code-block:: console
 
-      CONFIG_ELF=y                        /* Enable ELF */
+      CONFIG_COREDUMP=y                   /* Enable Coredump */
 
-      CONFIG_ELF_COREDUMP=y               /* Enable ELF Coredump */
-
-      CONFIG_BOARD_COREDUMP=y             /* Enable Board Coredump, if exceptions and assertions occur, */
+      CONFIG_BOARD_COREDUMP_SYSLOG=y      /* Enable Board Coredump, if exceptions and assertions occur, */
 
       CONFIG_SYSTEM_COREDUMP=y            /* Enable coredump in user command, which can capture the current
                                              state of one or all threads when the system is running, the

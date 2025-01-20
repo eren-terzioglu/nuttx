@@ -1,6 +1,8 @@
 # ##############################################################################
 # boards/arm/cxd56xx/spresense/src/CMakeLists.txt
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -41,9 +43,7 @@ if(CONFIG_ARCH_BUTTONS)
   list(APPEND SRCS cxd56_buttons.c)
 endif()
 
-if(CONFIG_CXD56_GPIO_IRQ)
-  list(APPEND SRCS cxd56_gpioif.c)
-endif()
+list(APPEND SRCS cxd56_gpioif.c)
 
 if(CONFIG_CXD56_PWM)
   list(APPEND SRCS cxd56_pwm.c)
